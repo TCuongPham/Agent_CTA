@@ -1,0 +1,66 @@
+# ==========================================
+# C++ / CMake Build Artifacts
+# ==========================================
+build/
+bin/
+out/
+lib/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+
+# ==========================================
+# Compiled Binaries and Libraries
+# ==========================================
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.exe
+*.out
+*.app
+
+# Target Executables (Linux output names)
+CTA
+CTB
+
+# Debug Symbols
+*.dSYM/
+*.pdb
+*.idb
+*.ilk
+
+# ==========================================
+# IDE & Editor Configurations
+# ==========================================
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.vs/
+.idea/
+*.suo
+*.user
+*.userosv
+*.sln.docstates
+
+# ==========================================
+# OS Generated Files
+# ==========================================
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# Runtime Artifacts & Logs
+# ==========================================
+*.log
+events.log
+*.sock
+*.tmp

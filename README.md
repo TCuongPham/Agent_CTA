@@ -1,10 +1,8 @@
-# HỆ THỐNG GIÁM SÁT TÀI NGUYÊN TIẾN TRÌNH: CTA & CTB
-> **Chương trình CTA (Agent/Monitor)** & **Chương trình CTB (Controller/Logger)**  
-> Ngôn ngữ: **C++17** | Kiến trúc: **Hướng đối tượng (OOP - Clean Architecture)** | Nền tảng: **Windows & Linux**
+# HỆ THỐNG GIÁM SÁT TÀI NGUYÊN TIẾN TRÌNH
 
 ---
 
-## 1. TỔNG QUAN DỰ ÁN
+## 1. TỔNG QUAN
 
 Hệ thống được thiết kế theo mô hình **Agent - Controller** tối ưu hóa hiệu năng, giao tiếp qua cơ chế **OS Native IPC** và sử dụng hoàn toàn **Native API** của hệ điều hành:
 
@@ -50,7 +48,7 @@ Hệ thống được thiết kế theo mô hình **Agent - Controller** tối �
 Dự án sử dụng **1 codebase duy nhất với Lớp trừu tượng (Interface Layer)** và quản lý biên dịch độc lập theo từng OS qua **CMake**:
 
 ```text
-CTA/
+Agent_CTA/
 ├── .gitignore                      # Bộ lọc bỏ file rác, file build, binaries, logs
 ├── CMakeLists.txt                  # Script CMake tự động nhận diện OS và cấu hình target
 ├── README.md                       # Tài liệu hướng dẫn chi tiết hệ thống
@@ -64,7 +62,7 @@ CTA/
 │   ├── CTACore.h                   # Động cơ điều phối giám sát, so khớp ngưỡng
 │   └── CTBClient.h                 # Module CTB: gửi config, nhận event và ghi log
 │
-├── src/                            # HIỆN THỰC LOGIC DÙNG CHUNG (C++17 Standard)
+├── src_CTA/                            # HIỆN THỰC LOGIC DÙNG CHUNG (C++17 Standard)
 │   ├── main_cta.cpp                # Entry point của tiến trình CTA
 │   ├── CTACore.cpp                 # Quản lý chu kỳ lấy mẫu, so sánh ngưỡng, kích hoạt event
 │   ├── EventQueue.cpp              # Hiện thực Ring Buffer Thread-safe bảo vệ chống tràn RAM
@@ -79,7 +77,7 @@ CTA/
 │       ├── LinuxFileStorage.h/.cpp      # POSIX File I/O (~/.config/cta/config.json)
 │       └── LinuxUnixSocket.h/.cpp       # POSIX Unix Domain Socket (/tmp/cta_ctb.sock)
 │
-├── ctb/                            # TIẾN TRÌNH CTB (CONTROLLER & LOGGER)
+├── src_CTB/                            # TIẾN TRÌNH CTB (CONTROLLER & LOGGER)
 │   └── main_ctb.cpp                # Entry point CTB: gửi config JSON, lắng nghe & ghi file log
 │
 └── third_party/                    # THƯ VIỆN BÊN THỨ 3 (HEADER-ONLY SIÊU NHẸ)
@@ -212,3 +210,4 @@ cmake --build . --config Release
 :: Release\CTA.exe
 :: Release\CTB.exe
 ```
+# Agent_CTA
