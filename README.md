@@ -4,7 +4,7 @@
 
 ## 1. TỔNG QUAN
 
-Hệ thống được thiết kế theo mô hình **Agent - Controller** tối ưu hóa hiệu năng, giao tiếp qua cơ chế **OS Native IPC** và sử dụng hoàn toàn **Native API** của hệ điều hành:
+Hệ thống được thiết kế theo mô hình **Agent - Controller** tối ưu hóa hiệu năng, giao tiếp qua **TCP Network Socket (Cross-platform TCP/IP)** và sử dụng hoàn toàn **Native API** của hệ điều hành để đo lường tài nguyên:
 
 ```
 +-------------------------------------------------------------------------+
@@ -13,8 +13,8 @@ Hệ thống được thiết kế theo mô hình **Agent - Controller** tối �
 +-------------------------------------------------------------------------+
           | Gửi cấu hình JSON                          ^ Nhận cảnh báo
           v                                            | (log vượt ngưỡng)
-======================== [ OS Native IPC ] ================================
-  (Windows: Named Pipes \\.\pipe\cta_ipc  |  Linux: Unix Socket /tmp/cta.sock)
+======================== [ TCP Network Socket ] ===========================
+   (Cross-platform TCP/IP: Host IP & Port, ví dụ: 127.0.0.1:9000)
 ===========================================================================
           |                                            |
           v                                            |
@@ -33,10 +33,12 @@ Hệ thống được thiết kế theo mô hình **Agent - Controller** tối �
 ### Chức năng chính:
 1. **CTA (Monitoring Agent)**:
    - Chạy ngầm định kỳ thu thập tài nguyên (`CPU %`, `Memory MB`, `Disk MB/s`, `Network KB/s`) của các tiến trình được chỉ định.
+   - Lắng nghe kết nối TCP Socket từ CTB trên cổng chỉ định (mặc định: `9000`). Hỗ trợ giám sát cục bộ (Localhost) hoặc giám sát từ xa qua mạng LAN/Internet.
    - Nhận cấu hình từ CTB. Nếu CTB không gửi cấu hình mới (hoặc khi CTB tắt), tự động nạp cấu hình cũ từ **Registry (Windows)** hoặc **Config File (Linux)**.
    - Phát hiện các chỉ số vượt ngưỡng trần và bắn cảnh báo về CTB.
-   - Tích hợp **Hàng đợi ngoại tuyến (Offline Event Queue)**: Khi CTB chưa chạy hoặc mất kết nối, toàn bộ sự kiện được lưu an toàn trong hàng đợi. Ngay khi CTB online trở lại, CTA tự động rút cạn (flush) toàn bộ log tồn đọng sang CTB.
+   - Tích hợp **Hàng đợi ngoại tuyến (Offline Event Queue)**: Khi CTB chưa chạy hoặc mất kết nối mạng, toàn bộ sự kiện được lưu an toàn trong hàng đợi. Ngay khi kết nối TCP với CTB phục hồi, CTA tự động rút cạn (flush) toàn bộ log tồn đọng sang CTB.
 2. **CTB (Manager / Logger)**:
+   - Kết nối tới CTA qua địa chỉ IP và Port của máy mục tiêu.
    - Gửi danh sách cấu hình tiến trình và ngưỡng giám sát dạng JSON sang CTA.
    - Nhận các sự kiện cảnh báo từ CTA và ghi ra file log theo đúng định dạng:
      `date time, process id, process name, type (cpu/memory/disk/network), value`
@@ -54,30 +56,29 @@ Agent_CTA/
 ├── README.md                       # Tài liệu hướng dẫn chi tiết hệ thống
 │
 ├── include/                        # GIAO DIỆN TRỪU TƯỢNG VÀ CORE MODELS (Cross-platform)
-│   ├── ConfigModel.h               # Structs: ProcessThreshold, MonitorConfig, EventRecord
+│   ├── ConfigModel.h               # Structs: ProcessThreshold, MonitorConfig, EventRecord (namespace sysmon)
 │   ├── IConfigStorage.h            # Interface lưu trữ cấu hình (Registry / File)
 │   ├── IProcessMonitor.h           # Interface thu thập metrics phần cứng của tiến trình
-│   ├── IIPCChannel.h               # Interface kênh truyền IPC 2 chiều (Server/Client)
+│   ├── ISocketChannel.h            # Interface kênh truyền Socket 2 chiều (TCP Server/Client)
 │   ├── EventQueue.h                # Hàng đợi Thread-safe bảo vệ dữ liệu khi CTB offline
-│   ├── CTACore.h                   # Động cơ điều phối giám sát, so khớp ngưỡng
-│   └── CTBClient.h                 # Module CTB: gửi config, nhận event và ghi log
+│   ├── CTA.h                   # Động cơ điều phối giám sát, so khớp ngưỡng
+│   └── CTB.h                 # Module CTB: gửi config, nhận event và ghi log
 │
-├── src_CTA/                            # HIỆN THỰC LOGIC DÙNG CHUNG (C++17 Standard)
+├── src_CTA/                        # HIỆN THỰC LOGIC DÙNG CHUNG CỦA AGENT (C++17 Standard)
 │   ├── main_cta.cpp                # Entry point của tiến trình CTA
-│   ├── CTACore.cpp                 # Quản lý chu kỳ lấy mẫu, so sánh ngưỡng, kích hoạt event
+│   ├── CTA.cpp                 # Quản lý chu kỳ lấy mẫu, so sánh ngưỡng, kích hoạt event
 │   ├── EventQueue.cpp              # Hiện thực Ring Buffer Thread-safe bảo vệ chống tràn RAM
+│   ├── TcpSocketChannel.h/.cpp     # Hiện thực TCP Socket đa nền tảng (Winsock2 trên Win / POSIX Socket trên Linux)
 │   │
 │   ├── windows/                    # HIỆN THỰC OS NATIVE API CHO WINDOWS (Chỉ build trên Win)
 │   │   ├── WindowsProcessMonitor.h/.cpp # Win32: Toolhelp32, PSAPI, IPHlpAPI
-│   │   ├── WindowsRegistryStorage.h/.cpp# Win32 Registry (HKEY_CURRENT_USER\Software\CTA)
-│   │   └── WindowsNamedPipe.h/.cpp      # Win32 Named Pipes (\\.\pipe\cta_ctb_pipe)
+│   │   └── WindowsRegistryStorage.h/.cpp# Win32 Registry (HKEY_CURRENT_USER\Software\CTA)
 │   │
 │   └── linux/                      # HIỆN THỰC OS NATIVE API CHO LINUX (Chỉ build trên Linux)
 │       ├── LinuxProcessMonitor.h/.cpp   # POSIX: /proc/[pid]/stat, status, io, net
-│       ├── LinuxFileStorage.h/.cpp      # POSIX File I/O (~/.config/cta/config.json)
-│       └── LinuxUnixSocket.h/.cpp       # POSIX Unix Domain Socket (/tmp/cta_ctb.sock)
+│       └── LinuxFileStorage.h/.cpp      # POSIX File I/O (~/.config/cta/config.json)
 │
-├── src_CTB/                            # TIẾN TRÌNH CTB (CONTROLLER & LOGGER)
+├── src_CTB/                        # TIẾN TRÌNH CTB (CONTROLLER & LOGGER)
 │   └── main_ctb.cpp                # Entry point CTB: gửi config JSON, lắng nghe & ghi file log
 │
 └── third_party/                    # THƯ VIỆN BÊN THỨ 3 (HEADER-ONLY SIÊU NHẸ)
@@ -118,7 +119,7 @@ Agent_CTA/
 | **Đo Disk I/O (MB/s)** | `GetProcessIoCounters` $\rightarrow$ `ReadTransferCount + WriteTransferCount` | Đọc `/proc/[pid]/io` $\rightarrow$ `read_bytes + write_bytes` |
 | **Đo Network (KB/s)**| `GetExtendedTcpTable`, `GetExtendedUdpTable` (IP Helper API) | Mapping Socket Inode từ `/proc/[pid]/fd/` và `/proc/net/tcp` |
 | **Lưu trữ Cấu hình** | Windows Registry: `RegCreateKeyExW`, `RegSetValueExW`, `RegQueryValueExW` | File I/O POSIX: Đường dẫn `~/.config/cta/config.json` |
-| **Kênh truyền IPC** | **Named Pipes**: `CreateNamedPipeW`, `ConnectNamedPipe`, `ReadFile`, `WriteFile` | **Unix Domain Sockets**: `socket(AF_UNIX)`, `bind`, `listen`, `accept`, `connect` |
+| **Kênh truyền Socket (TCP)** | **Winsock2 (TCP/IP)**: `WSAStartup`, `socket(AF_INET)`, `bind`, `listen`, `accept`, `connect`, `send`, `recv` | **POSIX Sockets (TCP/IP)**: `socket(AF_INET)`, `bind`, `listen`, `accept`, `connect`, `send`, `recv` |
 
 ---
 
@@ -160,8 +161,8 @@ $$\text{Network Rate (KB/s)} = \frac{\Delta \text{BytesSent} + \Delta \text{Byte
 - Tránh cấp phát động liên tục trong vòng lặp chính (`reserve` dung lượng trước cho vector).
 
 ### 6.3. Khả năng chịu lỗi & Chống mất dữ liệu (Fault Tolerance)
-- Khi CTB không chạy: CTA tự động lưu sự kiện vào `EventQueue` (Thread-safe, bảo vệ bằng mutex).
-- Khi CTB khởi động lại: CTA bắt sự kiện kết nối thành công, lập tức gửi toàn bộ sự kiện trong hàng đợi sang CTB theo thứ tự thời gian (FIFO).
+- Khi CTB không chạy / mất mạng: CTA tự động lưu sự kiện vào `EventQueue` (Thread-safe, bảo vệ bằng mutex).
+- Khi CTB kết nối lại: CTA bắt sự kiện kết nối thành công, lập tức gửi toàn bộ sự kiện trong hàng đợi sang CTB theo thứ tự thời gian (FIFO).
 
 ---
 
@@ -181,19 +182,20 @@ cmake ..
 cmake --build . -j$(nproc)
 
 # Kết quả sinh ra 2 file thực thi:
-# ./CTA  (Chương trình giám sát)
-# ./CTB  (Chương trình quản lý & ghi log)
+# ./CTA  (Chương trình giám sát - TCP Server lắng nghe cổng 9000)
+# ./CTB  (Chương trình quản lý & ghi log - TCP Client kết nối cổng 9000)
 
 # 4. Chạy thử nghiệm
-# Terminal 1: Chạy CTA trước (CTA tự nạp cấu hình cũ hoặc chờ cấu hình)
+# Terminal 1: Chạy CTA trước (lắng nghe TCP Socket 0.0.0.0:9000, tự nạp cấu hình cũ hoặc chờ kết nối)
 ./CTA
 
-# Terminal 2: Chạy CTB để đẩy cấu hình và hứng log
+# Terminal 2: Chạy CTB để kết nối TCP (127.0.0.1:9000), đẩy cấu hình và hứng log
 ./CTB
 ```
 
 ### 7.2. Trên Windows (Visual Studio / MSVC / MinGW)
 Yêu cầu: Visual Studio 2019/2022 (với C++ Desktop Development) hoặc MinGW-w64.
+*Lưu ý: CMake tự động liên kết thư viện mạng `ws2_32` cho Windows Socket.*
 
 ```cmd
 :: 1. Mở "Developer Command Prompt for VS"
@@ -207,7 +209,7 @@ cmake .. -G "Visual Studio 17 2022" -A x64
 cmake --build . --config Release
 
 :: Kết quả sinh ra:
-:: Release\CTA.exe
-:: Release\CTB.exe
+:: Release\CTA.exe (Lắng nghe TCP Port 9000)
+:: Release\CTB.exe (Kết nối TCP Port 9000)
 ```
 # Agent_CTA

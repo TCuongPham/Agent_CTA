@@ -1,29 +1,33 @@
 #include "EventQueue.h"
 
 namespace sysmon
-{
+{   
+    // Thiết lập kích thước hàng đợi 
     EventQueue::EventQueue(size_t max_capacity)
         : max_capacity_(max_capacity > 0 ? max_capacity : DEFAULT_MAX_CAPACITY)
     {
     }
+
+    // Đẩy sự kiện vào cuối hàng đợi
     void EventQueue::push(EventRecord event)
     {
         {
-            // Khóa mutex tự động giải phóng khi ra khỏi scope
+            // mutex tự động giải phóng khi ra khỏi scope
             std::lock_guard<std::mutex> lock(mutex_);
-            // Nếu hàng đợi đã chạm ngưỡng trần tối đa, loại bỏ phần tử cũ nhất (Ring Buffer drop-oldest)
+            // Nếu hàng đợi đầy, loại bỏ phần tử cũ nhất
             if (queue_.size() >= max_capacity_)
             {
                 queue_.pop_front();
                 ++dropped_count_;
             }
-            // Tận dụng move semantics để tránh sao chép các trường chuỗi ký tự
+            
             queue_.push_back(std::move(event));
         }
         // Đánh thức 1 luồng consumer đang chờ trong waitAndPop
         cv_.notify_one();
     }
 
+    // Lấy sự kiện cũ nhất đầu hàng đợi
     bool EventQueue::pop(EventRecord &outEvent)
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -31,10 +35,14 @@ namespace sysmon
         {
             return false;
         }
+        // Chuyển tài nguyên sang outEvent
         outEvent = std::move(queue_.front());
+        // Loại bỏ phần tử đầu  
         queue_.pop_front();
         return true;
     }
+
+    // Chờ đợi và lấy một sự kiện với thời gian timeout
     bool EventQueue::waitAndPop(EventRecord &outEvent, std::chrono::milliseconds timeout)
     {
         std::unique_lock<std::mutex> lock(mutex_);
@@ -49,6 +57,8 @@ namespace sysmon
         queue_.pop_front();
         return true;
     }
+
+    // Lấy toàn bộ sự kiện đang có trong hàng đợi 
     std::vector<EventRecord> EventQueue::drainAll()
     {
         std::vector<EventRecord> result;
@@ -58,7 +68,7 @@ namespace sysmon
             {
                 return result;
             }
-            // Cấp phát trước dung lượng (reserve) để tránh reallocate nhiều lần
+            // Cấp phát trước dung lượng 
             result.reserve(queue_.size());
             // Di chuyển toàn bộ phần tử sang vector kết quả
             while (!queue_.empty())
@@ -69,25 +79,31 @@ namespace sysmon
         }
         return result;
     }
+
+    // Lấy số lượng sự kiện hiện có trong hàng đợi
     size_t EventQueue::size() const
     {
         std::lock_guard<std::mutex> lock(mutex_);
         return queue_.size();
     }
+    // Kiểm tra hàng đợi rỗng
     bool EventQueue::empty() const
     {
         std::lock_guard<std::mutex> lock(mutex_);
         return queue_.empty();
     }
+    // Xóa toàn bộ sự kiện hiện có trong hàng đợi
     void EventQueue::clear()
     {
         std::lock_guard<std::mutex> lock(mutex_);
         queue_.clear();
     }
+    // Lấy kích thước tối đa của hàng đợi
     size_t EventQueue::capacity() const
     {
         return max_capacity_;
     }
+    // Lấy tổng số lượng sự kiện đã bị loại bỏ do đầy queue
     size_t EventQueue::droppedCount() const
     {
         std::lock_guard<std::mutex> lock(mutex_);

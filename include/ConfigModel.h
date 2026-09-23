@@ -115,7 +115,7 @@ namespace sysmon
         MetricType metric_type = MetricType::CPU;
 
         double value = 0.0;     // Giá trị thực
-        double threshold = 0.0; // Ngưỡng bị vượt
+        double threshold = 0.0; // Ngưỡng
 
         // Xuất chuỗi log chuẩn theo định dạng CTB:
         // date time, process id, process name, type, value

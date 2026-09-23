@@ -14,7 +14,7 @@ namespace sysmon
     class EventQueue
     {
     public:
-        // Dung lượng max mặc định (20,000 sự kiện xấp xỉ 3-5 MB RAM)
+        // Kích thước hàng đợi mặc định (20,000 sự kiện xấp xỉ 3-5 MB RAM)
         static constexpr size_t DEFAULT_MAX_CAPACITY = 20000;
 
         // Tạo hàng đợi
@@ -42,11 +42,11 @@ namespace sysmon
         size_t size() const;         // Lấy số lượng sự kiện hiện có trong hàng đợi
         bool empty() const;          // Kiểm tra hàng đợi có rỗng hay không
         void clear();                // Xóa toàn bộ sự kiện hiện có trong hàng đợi
-        size_t capacity() const;     // Lấy dung lượng trần tối đa của hàng đợi
+        size_t capacity() const;     // Lấy kích thước tối đa của hàng đợi
         size_t droppedCount() const; // Lấy tổng số lượng sự kiện đã bị loại bỏ do đầy queue
 
     private:
-        const size_t max_capacity_;     // Dung lượng trần cho phép
+        const size_t max_capacity_;     // Kích thước hàng đợi cho phép
         std::deque<EventRecord> queue_; // Bộ đệm lưu trữ nội bộ
         mutable std::mutex mutex_;      // Mutex bảo vệ truy cập đồng thời
         std::condition_variable cv_;    // Biến điều kiện đánh thức luồng Consumer
