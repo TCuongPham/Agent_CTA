@@ -6,6 +6,22 @@
 #include <string>
 #include <memory>
 #include <chrono>
+#include <atomic>
+#include <mutex>
+
+#if defined(_WIN32)
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+    using socket_t = SOCKET;
+    constexpr socket_t INVALID_SOCKET_FD = INVALID_SOCKET;
+#else
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <unistd.h>
+    using socket_t = int;
+    constexpr socket_t INVALID_SOCKET_FD = -1;
+#endif
 
 namespace sysmon
 {
@@ -41,6 +57,21 @@ namespace sysmon
         virtual bool isConnected() const = 0;
         // Chủ động ngắt kết nối và giải phóng tài nguyên
         virtual void disconnect() = 0;
+
+    private: 
+        // Đóng socket theo từng OS
+        void closeSocketHandle(socket_t& sock);
+
+        // Khởi tạo và giải phóng môi trường socket cho Win
+        static void initPlatformSockets();
+        // static void cleanupPlatformSockets();
+
+    private:
+        socket_t server_fd_ = INVALID_SOCKET_FD;  ///< Socket lắng nghe của Server (CTA)
+        socket_t client_fd_ = INVALID_SOCKET_FD;  ///< Socket truyền nhận dữ liệu kết nối
+        std::atomic<bool> is_connected_{false};   ///< Trạng thái kết nối hiện tại
+        std::string rx_buffer_;                   ///< Bộ đệm nhận phân tách thông điệp '\n'
+        std::mutex send_mutex_;                   ///< Bảo vệ gửi dữ liệu đồng thời từ nhiều luồng
     };
 
 }
