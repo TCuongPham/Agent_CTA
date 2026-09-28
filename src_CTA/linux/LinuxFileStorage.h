@@ -36,6 +36,6 @@ namespace sysmon
         static std::string resolveDefaultPath();
 
     private:
-        std::filesystem::path file_path_; ///< Đường dẫn tuyệt đối của file cấu hình
+        std::filesystem::path file_path_; ///< Đường dẫn của file cấu hình
     };
 }

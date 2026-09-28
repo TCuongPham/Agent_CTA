@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstdint>
 
+#include "BPFNetTracker.h"
 #include "IProcessMonitor.h"
 
 namespace sysmon
@@ -49,11 +50,10 @@ namespace sysmon
         static bool readProcessCpuTicks(uint32_t pid, uint64_t &out_proc_ticks);
         static double readProcessMemoryMb(uint32_t pid);
         static uint64_t readProcessDiskBytes(uint32_t pid);
-        static uint64_t readProcessNetworkBytes(uint32_t pid);
 
     private:
         long num_cores_ = 1;                                   ///< Số lượng lõi CPU của máy
         std::unordered_map<uint32_t, ProcessHistory> history_; ///< Bộ nhớ đệm lưu trạng thái cũ theo PID
+        BPFNetTracker bpf_tracker_;     ///< Module eBPF theo dõi mạng từng PID
     };
-
 }

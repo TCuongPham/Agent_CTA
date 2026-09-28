@@ -20,6 +20,8 @@ namespace sysmon
         {
             num_cores_ = 1;
         }
+        // Khởi tạo eBPF Tracker (nạp BPF bytecode vào kernel)
+        bpf_tracker_.initialize();
     }
 
     // 1. Đọc tên tiến trình từ /proc/[pid]/comm
@@ -144,45 +146,6 @@ namespace sysmon
         return read_bytes + write_bytes;
     }
 
-    // 6. Đọc tổng lưu lượng mạng qua /proc/[pid]/net/dev
-    uint64_t LinuxProcessMonitor::readProcessNetworkBytes(uint32_t pid)
-    {
-        std::ifstream file("/proc/" + std::to_string(pid) + "/net/dev");
-        if (!file.is_open())
-        {
-            return 0;
-        }
-
-        std::string line;
-        // Bỏ qua 2 dòng header đầu tiên
-        std::getline(file, line);
-        std::getline(file, line);
-        uint64_t total_bytes = 0;
-
-        while (std::getline(file, line))
-        {
-            size_t colon = line.find(':');
-            if (colon == std::string::npos)
-                continue;
-
-            std::string iface = line.substr(0, colon);
-
-            // Bỏ qua loopback ("lo") vì là mạng nội bộ
-            if (iface.find("lo") != std::string::npos)
-                continue;
-
-            std::istringstream iss(line.substr(colon + 1));
-            uint64_t rx_bytes = 0, tx_bytes = 0, dummy = 0;
-            // Định dạng cột: rx_bytes packets errs drop fifo frame compressed multicast tx_bytes ...
-            iss >> rx_bytes;
-            for (int i = 0; i < 7; ++i)
-                iss >> dummy;
-            iss >> tx_bytes;
-            total_bytes += (rx_bytes + tx_bytes);
-        }
-        return total_bytes;
-    }
-
     // Tìm kiếm toàn bộ PID của các tiến trình đang hoạt động khớp với tên.
     std::vector<uint32_t> LinuxProcessMonitor::getPidsByName(const std::string &processName)
     {
@@ -224,8 +187,11 @@ namespace sysmon
             return false;
         }
         uint64_t cur_sys_ticks = readSystemCpuTicks();
+        
         uint64_t cur_disk_bytes = readProcessDiskBytes(pid);
-        uint64_t cur_net_bytes = readProcessNetworkBytes(pid);
+
+        uint64_t cur_net_bytes = 0;
+        bpf_tracker_.getProcessNetworkBytes(pid, cur_net_bytes); 
 
         auto now = std::chrono::steady_clock::now();
         ProcessHistory &hist = history_[pid];
