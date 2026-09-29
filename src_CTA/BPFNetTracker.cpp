@@ -1,7 +1,7 @@
 // Lớp BPF này dùng thư viện libbpf để nạp file .bpf.o vào kernel và đọc Map.
 
 #include "BPFNetTracker.h"
-#include "process_net.skel.h" // Nhúng trực tiếp Skeleton
+#include "bpf/process_net.skel.h" // Nhúng trực tiếp Skeleton
 
 #include <bpf/bpf.h>
 #include <iostream>

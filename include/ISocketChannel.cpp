@@ -150,6 +150,41 @@ namespace sysmon
         return true;
     }
 
+    // CTB kết nối tới server
+    bool ISocketChannel::connectClient(const std::string &host, uint16_t port, int timeout_ms)
+    {
+        // Ngắt kết nối cũ nếu có
+        disconnect();
+        // 1. Tạo Socket TCP
+        client_fd_ = socket(AF_INET, SOCK_STREAM, 0);
+        if (client_fd_ == INVALID_SOCKET_FD)
+        {
+            std::cerr << "[ISocketChannel] Không thể tạo client socket." << std::endl;
+            return false;
+        }
+        // 2. Cấu hình địa chỉ IP và Port của Server cần kết nối tới
+        sockaddr_in server_addr{};
+        server_addr.sin_family = AF_INET;
+        server_addr.sin_port = htons(port);
+        if (inet_pton(AF_INET, host.c_str(), &server_addr.sin_addr) <= 0)
+        {
+            std::cerr << "[ISocketChannel] Địa chỉ IP không hợp lệ: " << host << std::endl;
+            closeSocketHandle(client_fd_);
+            return false;
+        }
+        // 3. Thực hiện kết nối tới Server
+        if (connect(client_fd_, reinterpret_cast<sockaddr *>(&server_addr), sizeof(server_addr)) < 0)
+        {
+            std::cerr << "[ISocketChannel] Kết nối tới " << host << ":" << port << " thất bại." << std::endl;
+            closeSocketHandle(client_fd_);
+            return false;
+        }
+        rx_buffer_.clear();
+        is_connected_.store(true);
+        std::cout << "[ISocketChannel] Đã kết nối thành công tới Server " << host << ":" << port << std::endl;
+        return true;
+    }
+
     // Gửi thông điệp
     bool ISocketChannel::sendMessage(const std::string &message)
     {
@@ -245,9 +280,9 @@ namespace sysmon
             disconnect();
             return false;
         }
-        // Nạp dữ liệu vừa nhận vào bộ đệm 
+        // Nạp dữ liệu vừa nhận vào bộ đệm
         rx_buffer_.append(chunk, static_cast<size_t>(bytes_read));
-        
+
         // 4. Trích xuất thông điệp hoàn chỉnh
         return extract_line();
     }
