@@ -2,7 +2,7 @@
     Tích hợp và điều phối các thành phần:
         - IProcessMonitor: Thu thập thông số phần cứng từ OS.
         - IConfigStorage: Nạp và lưu cấu hình (Registry/File).
-        - ISocketChannel: Lắng nghe và giao tiếp TCP với CTB.
+        - ISocketChannel: Kết nối và giao tiếp TCP với CTB.
         - EventQueue: Bộ đệm lưu trữ sự kiện cảnh báo.
 */
 
@@ -41,27 +41,21 @@ namespace sysmon
         CTA(CTA &&) noexcept = default;
         CTA &operator=(CTA &&) noexcept = default;
 
-        // Khởi động máy chủ TCP Socket và các luồng làm việc nền
-        bool start(const std::string &host = "0.0.0.0", uint16_t port = 9000);
+        // Khởi động kết nối tới CTB Server và các luồng làm việc nền
+        bool start(const std::string &host = "127.0.0.1", uint16_t port = 9000);
         // Dừng toàn bộ các luồng làm việc và ngắt kết nối an toàn.
         void stop();
         // Kiểm tra CTA có đang chạy
         bool isRunning() const;
 
-        // Lấy cấu hình giám sát mới từ chuỗi JSON và lưu cấu hình
+    private:
+        // Cập nhật cấu hình giám sát mới từ chuỗi JSON và lưu cấu hình
         bool applyConfigFromJson(const std::string &json_str);
 
-        // Lấy bản sao của cấu hình
-        MonitorConfig getConfig() const;
-
-        // Truy cập hàng đợi
-        std::shared_ptr<EventQueue> getEventQueue() const;
-
-    private:
         // Hàm thu thập thông số định kỳ và so khớp ngưỡng
         void samplingLoop();
 
-        // Hàm quản lý kết nối Client, nhận và đẩy log
+        // Luồng kết nối tới CTB Server, gửi cảnh báo và nhận cấu hình
         void networkLoop();
 
         // Kiểm tra vượt ngưỡng
@@ -78,7 +72,10 @@ namespace sysmon
         std::shared_ptr<EventQueue> event_queue_;
 
         // Trạng thái và quản lý luồng
+        std::string server_host_ = "127.0.0.1";
+        uint16_t server_port_ = 9000;
         std::atomic<bool> is_running_{false}; ///< Cờ báo hiệu trạng thái hoạt động
+        
         std::thread sampling_thread_;         ///< Luồng đo đạc tài nguyên
         std::thread network_thread_;          ///< Luồng giao tiếp TCP với CTB
 

@@ -29,11 +29,5 @@ namespace sysmon
         // Thu thập chỉ số phần cứng định kỳ cho một danh sách các tiến trình mục tiêu.
         virtual std::vector<ProcessMetrics> collectMetrics(
             const std::vector<std::string> &targetProcessNames) = 0;
-
-        // Tìm kiếm toàn bộ PID của các tiến trình đang hoạt động khớp với tên.
-        virtual std::vector<uint32_t> getPidsByName(const std::string &processName) = 0;
-
-        // Lấy chỉ số tài nguyên chi tiết cho một tiến trình cụ thể thông qua PID.
-        virtual bool getMetricsForPid(uint32_t pid, ProcessMetrics &outMetrics) = 0;
     };
 }

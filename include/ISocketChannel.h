@@ -1,5 +1,4 @@
-// Trên Linux: LinuxUnixSocket (POSIX Unix Domain Socket: /tmp/cta_ctb.sock).
-// Trên Windows: WindowsNamedPipe (Win32 Named Pipe: \\.\pipe\cta_ctb_pipe).
+// Giao tiếp TCP Socket đa nền tảng (Winsock2 trên Windows / POSIX Sockets trên Linux).
 
 #pragma once
 
@@ -29,8 +28,8 @@ namespace sysmon
     {
     public:
         // Hàm hủy cho phép ghi đè
-        virtual ~ISocketChannel() = default;
-        ISocketChannel() = default;
+        virtual ~ISocketChannel();
+        ISocketChannel();
 
         // Cấm sao chép (Copy Constructor & Copy Assignment)
         ISocketChannel(const ISocketChannel &) = delete;
@@ -40,23 +39,23 @@ namespace sysmon
         ISocketChannel &operator=(ISocketChannel &&) noexcept = default;
 
         // Tạo kênh truyền ở server
-        virtual bool startServer(const std::string &host = "0.0.0.0", uint16_t port = 9000) = 0;
+        virtual bool startServer(const std::string &host = "0.0.0.0", uint16_t port = 9000);
 
-        // Chờ CTB kết nối tới
-        virtual bool waitForClient(int timeout_ms = -1) = 0;
+        // Chờ Client kết nối tới (Server mode)
+        virtual bool waitForClient(int timeout_ms = -1);
 
-        // CTB kết nối tới server
-        virtual bool connectClient(const std::string &host = "127.0.0.1", uint16_t port = 9000, int timeout_ms = 5000) = 0;
+        // Kết nối tới Server (Client mode)
+        virtual bool connectClient(const std::string &host = "127.0.0.1", uint16_t port = 9000, int timeout_ms = 5000);
 
         // Gửi thông điệp
-        virtual bool sendMessage(const std::string &message) = 0;
+        virtual bool sendMessage(const std::string &message);
         // Đọc một thông điệp
-        virtual bool receiveMessage(std::string &outMessage, int timeout_ms = -1) = 0;
+        virtual bool receiveMessage(std::string &outMessage, int timeout_ms = -1);
 
         // Kiểm tra kênh truyền
-        virtual bool isConnected() const = 0;
+        virtual bool isConnected() const;
         // Chủ động ngắt kết nối và giải phóng tài nguyên
-        virtual void disconnect() = 0;
+        virtual void disconnect();
 
     private: 
         // Đóng socket theo từng OS
@@ -67,7 +66,7 @@ namespace sysmon
         // static void cleanupPlatformSockets();
 
     private:
-        socket_t server_fd_ = INVALID_SOCKET_FD;  ///< Socket lắng nghe của Server (CTA)
+        socket_t server_fd_ = INVALID_SOCKET_FD;  ///< Socket lắng nghe của Server
         socket_t client_fd_ = INVALID_SOCKET_FD;  ///< Socket truyền nhận dữ liệu kết nối
         std::atomic<bool> is_connected_{false};   ///< Trạng thái kết nối hiện tại
         std::string rx_buffer_;                   ///< Bộ đệm nhận phân tách thông điệp '\n'

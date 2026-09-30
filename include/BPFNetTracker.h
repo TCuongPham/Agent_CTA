@@ -28,9 +28,6 @@ namespace sysmon
         //Lấy tổng số byte mạng (RX + TX) của một PID.
         bool getProcessNetworkBytes(uint32_t pid, uint64_t &out_total_bytes);
 
-        // Kiểm tra eBPF có đang hoạt động hay không
-        bool isAvailable() const;
-
     private:
         struct process_net_bpf *skel_ = nullptr; ///< Con trỏ đối tượng Skeleton
         int map_fd_ = -1;                        ///< File descriptor của proc_net_map

@@ -53,7 +53,7 @@ namespace sysmon
         }
     }
 
-    // Khởi động máy chủ TCP Socket và các luồng làm việc nền
+    // Khởi động kết nối tới CTB Server và các luồng làm việc nền
     bool CTA::start(const std::string &host, uint16_t port)
     {
         // Kiểm tra trạng thái
@@ -67,13 +67,9 @@ namespace sysmon
             std::cerr << "[CTA] Lỗi: SocketChannel chưa được khởi tạo!" << std::endl;
             return false;
         }
-        // Khởi tạo máy chủ TCP Socket
-        if (!socket_channel_->startServer(host, port))
-        {
-            std::cerr << "[CTA] Không thể mở TCP Socket Server trên " << host << ":" << port << std::endl;
-            return false;
-        }
-        std::cout << "[CTA] TCP Socket Server đã sẵn sàng trên " << host << ":" << port << std::endl;
+        // Lưu thông tin CTB Server cần kết nối
+        server_host_ = host;
+        server_port_ = port;
         is_running_.store(true);
 
         // Bắt đầu 2 luồng làm việc nền
@@ -147,17 +143,6 @@ namespace sysmon
         }
     }
 
-    // Lấy bản sao của cấu hình
-    MonitorConfig CTA::getConfig() const
-    {
-        std::lock_guard<std::mutex> lock(config_mutex_);
-        return current_config_;
-    }
-    // Truy cập hàng đợi
-    std::shared_ptr<EventQueue> CTA::getEventQueue() const
-    {
-        return event_queue_;
-    }
 
     // Hàm thu thập thông số định kỳ và so khớp ngưỡng
     void CTA::samplingLoop()
@@ -235,22 +220,26 @@ namespace sysmon
         }
     }
 
-    // Hàm quản lý kết nối Client, nhận và đẩy log
+    // Luồng kết nối tới CTB Server, gửi cảnh báo và nhận cấu hình
     void CTA::networkLoop()
     {
         std::cout << "[CTA] Network connect..." << std::endl;
         while (is_running_.load())
         {
-            // 1. Chờ CTB kết nối (timeout 1000ms để kiểm tra lại cờ is_running_)
+            // 1. Tự động kết nối tới CTB Server (timeout 1000ms)
             if (!socket_channel_->isConnected())
             {
-                if (!socket_channel_->waitForClient(1000))
+                if (!socket_channel_->connectClient(server_host_, server_port_, 1000))
                 {
-                    continue; // Chưa có client, tiếp tục chờ
+                    // Chờ 1 giây rồi thử lại
+                    std::unique_lock<std::mutex> lock(stop_mutex_);
+                    cv_stop_.wait_for(lock, std::chrono::seconds(1), [this]
+                                      { return !is_running_.load(); });
+                    continue;
                 }
-                std::cout << "[CTA] CTB đã kết nối thành công qua TCP Socket!" << std::endl;
+                std::cout << "[CTA] Đã kết nối tới CTB Server!" << std::endl;
 
-                // 2. CTB vừa online đẩy log
+                // 2. Vừa kết nối -> đẩy toàn bộ log tồn đọng
                 std::vector<EventRecord> pending_events = event_queue_->drainAll();
                 if (!pending_events.empty())
                 {

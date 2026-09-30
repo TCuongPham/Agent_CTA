@@ -47,14 +47,24 @@ namespace sysmon
             auto parent_dir = file_path_.parent_path();
             if (!parent_dir.empty() && !std::filesystem::exists(parent_dir))
             {
-                std::filesystem::create_directories(parent_dir);
+                std::error_code ec;
+                std::filesystem::create_directories(parent_dir, ec);
+                if (ec)
+                {
+                    file_path_ = "/tmp/cta_config.json";
+                }
             }
             // 2. Mở file và ghi đè nội dung cấu hình mới nhất
             std::ofstream out_file(file_path_, std::ios::out | std::ios::trunc);
             if (!out_file.is_open())
             {
-                std::cerr << "[LinuxFileStorage] Không thể mở file để ghi: " << file_path_ << std::endl;
-                return false;
+                file_path_ = "/tmp/cta_config.json";
+                out_file.open(file_path_, std::ios::out | std::ios::trunc);
+                if (!out_file.is_open())
+                {
+                    std::cerr << "[LinuxFileStorage] Không thể mở file để ghi: " << file_path_ << std::endl;
+                    return false;
+                }
             }
             out_file << json;
             out_file.close();

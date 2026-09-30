@@ -146,32 +146,6 @@ namespace sysmon
         return read_bytes + write_bytes;
     }
 
-    // Tìm kiếm toàn bộ PID của các tiến trình đang hoạt động khớp với tên.
-    std::vector<uint32_t> LinuxProcessMonitor::getPidsByName(const std::string &processName)
-    {
-        std::vector<uint32_t> pids;
-        DIR *dir = opendir("/proc");
-        if (!dir)
-        {
-            return pids;
-        }
-        struct dirent *entry;
-        while ((entry = readdir(dir)) != nullptr)
-        {
-            // Chỉ quan tâm các thư mục có tên là số nguyên (PID)
-            if (entry->d_name[0] < '0' || entry->d_name[0] > '9')
-            {
-                continue;
-            }
-            uint32_t pid = static_cast<uint32_t>(std::strtoul(entry->d_name, nullptr, 10));
-            if (pid > 0 && readProcessComm(pid) == processName)
-            {
-                pids.push_back(pid);
-            }
-        }
-        closedir(dir);
-        return pids;
-    }
 
     // Lấy chỉ số tài nguyên chi tiết cho một tiến trình cụ thể thông qua PID.
     bool LinuxProcessMonitor::getMetricsForPid(uint32_t pid, ProcessMetrics &outMetrics)

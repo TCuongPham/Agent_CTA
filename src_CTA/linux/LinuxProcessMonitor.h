@@ -40,10 +40,11 @@ namespace sysmon
         // Hàm override từ IProcessMonitor
         std::vector<ProcessMetrics> collectMetrics(
             const std::vector<std::string> &targetProcessNames) override;
-        std::vector<uint32_t> getPidsByName(const std::string &processName) override;
-        bool getMetricsForPid(uint32_t pid, ProcessMetrics &outMetrics) override;
 
     private:
+        // Lấy chỉ số tài nguyên chi tiết cho một tiến trình cụ thể thông qua PID
+        bool getMetricsForPid(uint32_t pid, ProcessMetrics &outMetrics);
+
         // CÁC HÀM ĐỌC /proc
         static std::string readProcessComm(uint32_t pid);
         static uint64_t readSystemCpuTicks();

@@ -27,16 +27,16 @@ int main(int argc, char *argv[])
 {
     std::cout << " ===================CTA AGENT===================" << std::endl;
 
-    // 1. Cấu hình cổng và địa chỉ lắng nghe
-    std::string host = "0.0.0.0";
+    // 1. Cấu hình địa chỉ và cổng CTB Server
+    std::string host = "127.0.0.1";
     uint16_t port = 9000;
     if (argc >= 2)
     {
-        port = static_cast<uint16_t>(std::stoi(argv[1]));
+        host = argv[1];
     }
     if (argc >= 3)
     {
-        host = argv[2];
+        port = static_cast<uint16_t>(std::stoi(argv[2]));
     }
     // 2. Đăng ký bắt các tín hiệu tắt hệ thống: Ctrl+C (SIGINT) và kill (SIGTERM)
     std::signal(SIGINT, signalHandler);
@@ -61,13 +61,13 @@ int main(int argc, char *argv[])
 
     g_cta_instance = &cta;
 
-    // 5. Khởi động CTA (bật Socket Server và các Worker Threads)
+    // 5. Khởi động CTA (chế độ Client kết nối tới CTB Server)
     if (!cta.start(host, port))
     {
         std::cerr << "[CTA] Khởi động CTA thất bại. Kết thúc chương trình." << std::endl;
         return 1;
     }
-    std::cout << "\n>>> CTA AGENT ĐANG CHẠY TRÊN PORT " << port << " <<<" << std::endl;
+    std::cout << "\n>>> CTA AGENT ĐANG CHẠY (KẾT NỐI SERVER " << host << ":" << port << ") <<<" << std::endl;
     std::cout << ">>> Ctrl+C để dừng chương trình <<<\n"
               << std::endl;
 

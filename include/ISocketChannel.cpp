@@ -106,7 +106,7 @@ namespace sysmon
         return true;
     }
 
-    // Chờ CTB kết nối tới
+    // Chờ Client kết nối tới (Server mode)
     bool ISocketChannel::waitForClient(int timeout_ms)
     {
         if (server_fd_ == INVALID_SOCKET_FD)
@@ -130,7 +130,7 @@ namespace sysmon
             }
         }
 
-        // 2. Chấp nhận kết nối từ Client mới (CTB)
+        // 2. Chấp nhận kết nối từ Client mới
         sockaddr_in client_addr{};
 #if defined(_WIN32)
         int addr_len = sizeof(client_addr);
@@ -150,11 +150,13 @@ namespace sysmon
         return true;
     }
 
-    // CTB kết nối tới server
+    // Kết nối tới Server (Client mode)
     bool ISocketChannel::connectClient(const std::string &host, uint16_t port, int timeout_ms)
     {
+        (void)timeout_ms;
         // Ngắt kết nối cũ nếu có
         disconnect();
+
         // 1. Tạo Socket TCP
         client_fd_ = socket(AF_INET, SOCK_STREAM, 0);
         if (client_fd_ == INVALID_SOCKET_FD)
@@ -162,6 +164,7 @@ namespace sysmon
             std::cerr << "[ISocketChannel] Không thể tạo client socket." << std::endl;
             return false;
         }
+
         // 2. Cấu hình địa chỉ IP và Port của Server cần kết nối tới
         sockaddr_in server_addr{};
         server_addr.sin_family = AF_INET;
@@ -172,6 +175,7 @@ namespace sysmon
             closeSocketHandle(client_fd_);
             return false;
         }
+        
         // 3. Thực hiện kết nối tới Server
         if (connect(client_fd_, reinterpret_cast<sockaddr *>(&server_addr), sizeof(server_addr)) < 0)
         {

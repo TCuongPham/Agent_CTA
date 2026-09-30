@@ -54,10 +54,6 @@ namespace sysmon
 
     }
     
-    bool BPFNetTracker::isAvailable() const
-    {
-        return is_available_;
-    }
 
     bool BPFNetTracker::getProcessNetworkBytes(uint32_t pid, uint64_t &out_total_bytes)
     {

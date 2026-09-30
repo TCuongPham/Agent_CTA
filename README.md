@@ -33,12 +33,13 @@ Hệ thống được thiết kế theo mô hình **Agent - Controller** tối �
 ### Chức năng chính:
 1. **CTA (Monitoring Agent)**:
    - Chạy ngầm định kỳ thu thập tài nguyên (`CPU %`, `Memory MB`, `Disk MB/s`, `Network KB/s`) của các tiến trình được chỉ định.
-   - Lắng nghe kết nối TCP Socket từ CTB trên cổng chỉ định (mặc định: `9000`). Hỗ trợ giám sát cục bộ (Localhost) hoặc giám sát từ xa qua mạng LAN/Internet.
+   - Tự động kết nối TCP Socket tới CTB Server (mặc định: 127.0.0.1:9000). Hỗ trợ giám sát cục bộ (Localhost) hoặc giám sát từ xa qua mạng LAN/Internet.
    - Nhận cấu hình từ CTB. Nếu CTB không gửi cấu hình mới (hoặc khi CTB tắt), tự động nạp cấu hình cũ từ **Registry (Windows)** hoặc **Config File (Linux)**.
    - Phát hiện các chỉ số vượt ngưỡng trần và bắn cảnh báo về CTB.
-   - Tích hợp **Hàng đợi ngoại tuyến (Offline Event Queue)**: Khi CTB chưa chạy hoặc mất kết nối mạng, toàn bộ sự kiện được lưu an toàn trong hàng đợi. Ngay khi kết nối TCP với CTB phục hồi, CTA tự động rút cạn (flush) toàn bộ log tồn đọng sang CTB.
+   - Tích hợp **Hàng đợi ngoại tuyến (Offline Event Queue)**: Khi CTB chưa chạy hoặc mất kết nối mạng, toàn bộ sự kiện được lưu an toàn trong hàng đợi. Ngay khi kết nối TCP với CTB phục hồi, CTA tự động rút cạn (drainAll) toàn bộ log tồn đọng sang CTB.
 2. **CTB (Manager / Logger)**:
-   - Kết nối tới CTA qua địa chỉ IP và Port của máy mục tiêu.
+   - Khởi động máy chủ TCP Socket lắng nghe kết nối từ CTA Agent (mặc định: 0.0.0.0:9000).
+   - Tự động theo dõi file config.json (Save file là tự động đẩy cấu hình sang CTA).
    - Gửi danh sách cấu hình tiến trình và ngưỡng giám sát dạng JSON sang CTA.
    - Nhận các sự kiện cảnh báo từ CTA và ghi ra file log theo đúng định dạng:
      `date time, process id, process name, type (cpu/memory/disk/network), value`
@@ -182,15 +183,15 @@ cmake ..
 cmake --build . -j$(nproc)
 
 # Kết quả sinh ra 2 file thực thi:
-# ./CTA  (Chương trình giám sát - TCP Server lắng nghe cổng 9000)
-# ./CTB  (Chương trình quản lý & ghi log - TCP Client kết nối cổng 9000)
+# ./CTB  (Chương trình quản lý & ghi log - TCP Server lắng nghe cổng 9000)
+# ./CTA  (Chương trình giám sát - TCP Client kết nối tới CTB 127.0.0.1:9000)
 
 # 4. Chạy thử nghiệm
-# Terminal 1: Chạy CTA trước (lắng nghe TCP Socket 0.0.0.0:9000, tự nạp cấu hình cũ hoặc chờ kết nối)
-./CTA
-
-# Terminal 2: Chạy CTB để kết nối TCP (127.0.0.1:9000), đẩy cấu hình và hứng log
+# Terminal 1: Chạy CTB Server trước (lắng nghe TCP Socket 0.0.0.0:9000, tự đọc config.json và ghi log)
 ./CTB
+
+# Terminal 2: Chạy CTA Client (kết nối tới CTB 127.0.0.1:9000, lấy mẫu và gửi cảnh báo)
+./CTA
 ```
 
 ### 7.2. Trên Windows (Visual Studio / MSVC / MinGW)
@@ -209,7 +210,7 @@ cmake .. -G "Visual Studio 17 2022" -A x64
 cmake --build . --config Release
 
 :: Kết quả sinh ra:
-:: Release\CTA.exe (Lắng nghe TCP Port 9000)
-:: Release\CTB.exe (Kết nối TCP Port 9000)
+:: Release\CTB.exe (TCP Server lắng nghe Port 9000)
+:: Release\CTA.exe (TCP Client kết nối Port 9000)
 ```
 # Agent_CTA
