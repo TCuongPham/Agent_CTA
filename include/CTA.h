@@ -75,6 +75,7 @@ namespace sysmon
         std::string server_host_ = "127.0.0.1";
         uint16_t server_port_ = 9000;
         std::atomic<bool> is_running_{false}; ///< Cờ báo hiệu trạng thái hoạt động
+        std::atomic<bool> config_updated_{false}; ///< Cờ báo hiệu cấu hình mới được cập nhật
         
         std::thread sampling_thread_;         ///< Luồng đo đạc tài nguyên
         std::thread network_thread_;          ///< Luồng giao tiếp TCP với CTB

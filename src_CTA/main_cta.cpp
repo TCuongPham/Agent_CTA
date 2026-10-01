@@ -5,8 +5,13 @@
 #include <chrono>
 
 #include "CTA.h"
+#if defined(_WIN32)
+#include "WindowsProcessMonitor.h"
+#include "WindowsRegistryStorage.h"
+#else
 #include "LinuxProcessMonitor.h"
 #include "LinuxFileStorage.h"
+#endif
 #include "ISocketChannel.h"
 #include "EventQueue.h"
 
@@ -44,13 +49,19 @@ int main(int argc, char *argv[])
 
     // 3. Khởi tạo các module thành phần thông qua Dependency Injection
     std::cout << "[CTA] Đang khởi tạo Modules..." << std::endl;
+#if defined(_WIN32)
+    auto monitor = std::make_unique<sysmon::WindowsProcessMonitor>();
+    auto storage = std::make_unique<sysmon::WindowsRegistryStorage>();
+    std::cout << "[CTA] Cấu hình lưu tại Registry: HKCU\\"
+              << storage->getSubKey() << "\\" << storage->getValueName() << std::endl;
+#else
     auto monitor = std::make_unique<sysmon::LinuxProcessMonitor>();
     auto storage = std::make_unique<sysmon::LinuxFileStorage>();
-    auto socket_channel = std::make_unique<sysmon::ISocketChannel>();
-    auto event_queue = std::make_shared<sysmon::EventQueue>();
-
     std::cout << "[CTA] Cấu hình lưu tại: "
               << storage->getFilePath() << std::endl;
+#endif
+    auto socket_channel = std::make_unique<sysmon::ISocketChannel>();
+    auto event_queue = std::make_shared<sysmon::EventQueue>();
 
     // 4. Trung tâm CTA
     sysmon::CTA cta(
@@ -68,8 +79,6 @@ int main(int argc, char *argv[])
         return 1;
     }
     std::cout << "\n>>> CTA AGENT ĐANG CHẠY (KẾT NỐI SERVER " << host << ":" << port << ") <<<" << std::endl;
-    std::cout << ">>> Ctrl+C để dừng chương trình <<<\n"
-              << std::endl;
 
     // 6. Giữ tiến trình main cho đến khi nhận lệnh dừng
     while (cta.isRunning())

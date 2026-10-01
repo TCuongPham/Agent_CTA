@@ -27,9 +27,21 @@ namespace sysmon
     // Đọc cấu hình từ file json
     bool CTB::loadConfigFromFile(const std::string &file_path)
     {
-        config_file_path_ = file_path;
+        std::string target_path = file_path;
+        if (!std::filesystem::exists(target_path))
+        {
+            // Nếu không tìm thấy ở thư mục hiện tại (ví dụ đang ở build/), thử tìm ở thư mục cha
+            if (std::filesystem::exists("../" + file_path))
+            {
+                target_path = "../" + file_path;
+            }
+        }
+
+        config_file_path_ = target_path;
         if (!std::filesystem::exists(config_file_path_))
         {
+            std::cerr << "[CTB] Cảnh báo: Không tìm thấy file cấu hình tại " << file_path 
+                      << " hoặc ../" << file_path << std::endl;
             return false;
         }
 
@@ -38,6 +50,7 @@ namespace sysmon
             std::ifstream file(config_file_path_);
             if (!file.is_open())
             {
+                std::cerr << "[CTB] Không thể mở file cấu hình: " << config_file_path_ << std::endl;
                 return false;
             }
             std::stringstream buffer;
@@ -50,7 +63,7 @@ namespace sysmon
         }
         catch (const std::exception &e)
         {
-            std::cerr << "[CTB] Lỗi nạp cấu hình từ " << file_path << ": " << e.what() << std::endl;
+            std::cerr << "[CTB] Lỗi nạp cấu hình từ " << config_file_path_ << ": " << e.what() << std::endl;
             return false;
         }
     }
@@ -132,9 +145,21 @@ namespace sysmon
     // Kiểm tra và tự động reload nếu file config.json vừa được Save
     void CTB::checkAndReloadConfigFile()
     {
-        if (config_file_path_.empty() || !std::filesystem::exists(config_file_path_))
+        if (config_file_path_.empty())
         {
             return;
+        }
+
+        if (!std::filesystem::exists(config_file_path_))
+        {
+            if (std::filesystem::exists("../" + config_file_path_))
+            {
+                config_file_path_ = "../" + config_file_path_;
+            }
+            else
+            {
+                return;
+            }
         }
 
         try
@@ -142,25 +167,35 @@ namespace sysmon
             auto current_time = std::filesystem::last_write_time(config_file_path_);
             if (current_time != last_config_time_)
             {
-                last_config_time_ = current_time;
                 std::ifstream file(config_file_path_);
                 if (file.is_open())
                 {
                     std::stringstream buffer;
                     buffer << file.rdbuf();
-                    json j = json::parse(buffer.str());
-                    current_config_json_ = j.dump();
-                    std::cout << "\n[CTB Server] File " << config_file_path_ 
-                              << " vừa thay đổi! Tự động gửi cấu hình sang CTA..." << std::endl;
-                    if (socket_channel_->isConnected())
+                    std::string content = buffer.str();
+                    if (!content.empty())
                     {
-                        sendConfigJson(current_config_json_);
+                        json j = json::parse(content);
+                        std::string new_json = j.dump();
+                        last_config_time_ = current_time;
+
+                        if (new_json != current_config_json_)
+                        {
+                            current_config_json_ = std::move(new_json);
+                            std::cout << "\n[CTB Server] File " << config_file_path_ 
+                                      << " vừa thay đổi! Tự động gửi cấu hình sang CTA..." << std::endl;
+                            if (socket_channel_->isConnected())
+                            {
+                                sendConfigJson(current_config_json_);
+                            }
+                        }
                     }
                 }
             }
         }
-        catch (...)
+        catch (const std::exception &e)
         {
+            std::cerr << "[CTB] Cảnh báo lỗi đọc/parse file config: " << e.what() << std::endl;
         }
     }
 

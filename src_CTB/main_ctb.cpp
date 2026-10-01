@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     }
 
     // 3. Chạy vòng lặp lắng nghe CTA kết nối và nhận cảnh báo
-    std::cout << "\n>>> CTB Server đang chạy... (Nhấn Ctrl+C để dừng) <<<\n"
+    std::cout << "\n>>> CTB Server đang chạy...<<<\n"
               << std::endl;
 
     ctb.runReceiveLoop();

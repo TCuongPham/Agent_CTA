@@ -129,10 +129,10 @@ Agent_CTA/
 ### 5.1. Thuật toán tính CPU (%)
 CPU là giá trị biến thiên theo thời gian, được tính dựa trên độ lệch thời gian thực thi của tiến trình chia cho tổng thời gian trôi qua của toàn hệ thống trong khoảng thời gian $\Delta t$:
 
-$$\text{CPU \%} = \frac{\Delta (\text{KernelTime} + \text{UserTime})}{\Delta \text{TotalSystemTime}} \times 100\% \times N_{\text{cores}}$$
+$$\text{CPU \%} = \frac{\Delta (\text{KernelTime} + \text{UserTime})}{\Delta \text{TotalSystemTime}} \times 100\%$$
 
 - Trên **Windows**: Tính hiệu số giữa 2 lần gọi `GetProcessTimes` chia cho hiệu số giữa 2 lần gọi `GetSystemTimes`.
-- Trên **Linux**: Tính hiệu số giữa `(utime + stime)` trong `/proc/[pid]/stat` chia cho tổng ticks CPU hệ thống trong `/proc/stat`.
+- Trên **Linux**: Tính hiệu số giữa `(utime + stime)` trong `/proc/[pid]/stat` chia cho tổng ticks CPU hệ thống trong `/proc/stat` (chuẩn hóa `[0%, 100%]`).
 
 ### 5.2. Thuật toán tính Memory (MB)
 Đo lượng RAM vật lý thực tế mà hệ điều hành cấp phát cho tiến trình (*Resident / Working Set*):

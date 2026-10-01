@@ -106,7 +106,6 @@ namespace sysmon
         {
             network_thread_.join();
         }
-        std::cout << "[CTA] Đã dừng." << std::endl;
     }
 
     // Hàm kiểm tra CTA có đang chạy
@@ -134,6 +133,9 @@ namespace sysmon
             {
                 storage_->saveConfig(json_str);
             }
+            // Đánh thức luồng lấy mẫu để áp dụng ngay chu kỳ và danh sách tiến trình mới
+            config_updated_.store(true);
+            cv_stop_.notify_all();
             return true;
         }
         catch (const std::exception &e)
@@ -185,12 +187,13 @@ namespace sysmon
                     }
                 }
             }
-            // 3. Ngủ theo chu kỳ
+            // 3. Ngủ theo chu kỳ (sẽ thức dậy sớm nếu có lệnh dừng hoặc có cấu hình mới)
             std::unique_lock<std::mutex> lock(stop_mutex_);
             cv_stop_.wait_for(lock, std::chrono::milliseconds(interval_ms), [this]
-                              { return !is_running_.load(); });
+                              { return !is_running_.load() || config_updated_.load(); });
+            config_updated_.store(false);
         }
-        std::cout << "[CTA] Kết thúc." << std::endl;
+        std::cout << "[CTA] Luồng thu thập tài nguyên kết thúc." << std::endl;
     }
     void CTA::checkThresholds(const ProcessMetrics &m, const ProcessThreshold &th)
     {

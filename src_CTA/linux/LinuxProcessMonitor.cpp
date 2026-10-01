@@ -182,12 +182,13 @@ namespace sysmon
             double dt = elapsed.count();
             if (dt > 0.0)
             {
-                // 2. Tính toán CPU (%)
+                // 2. Tính toán CPU (%) chuẩn hóa trên toàn hệ thống (0% - 100%)
                 if (cur_sys_ticks > hist.last_sys_ticks && cur_proc_ticks >= hist.last_proc_ticks)
                 {
                     uint64_t delta_proc = cur_proc_ticks - hist.last_proc_ticks;
                     uint64_t delta_sys = cur_sys_ticks - hist.last_sys_ticks;
-                    cpu_pct = (static_cast<double>(delta_proc) / delta_sys) * 100.0 * num_cores_;
+                    cpu_pct = (static_cast<double>(delta_proc) / delta_sys) * 100.0;
+                    cpu_pct = std::clamp(cpu_pct, 0.0, 100.0);
                 }
                 // 3. Tính toán Disk I/O (MB/s)
                 if (cur_disk_bytes >= hist.last_disk_bytes)

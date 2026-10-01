@@ -4,18 +4,17 @@
 #include <sstream>
 #include <iostream>
 #include <cstdlib>
+#include <cerrno>
+#include <cstring>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 namespace sysmon
 {
-    // Xác định đường dẫn file mặc định dựa vào biến môi trường $HOME.
+    // Xác định đường dẫn file mặc định: chỉ sử dụng /tmp/cta_config.json
     std::string LinuxFileStorage::resolveDefaultPath()
     {
-        const char *home = std::getenv("HOME");
-        if (home != nullptr && *home != '\0')
-        {
-            return std::string(home) + "/.config/cta/config.json";
-        }
-        // Fallback nếu không đọc được biến HOME
         return "/tmp/cta_config.json";
     }
 
@@ -38,36 +37,46 @@ namespace sysmon
         return file_path_.string();
     }
 
-    // Lưu trữ chuỗi JSON cấu hình xuống bộ nhớ (Registry hoặc File)
+    // Lưu trữ chuỗi JSON cấu hình xuống bộ nhớ (File)
     bool LinuxFileStorage::saveConfig(const std::string &json)
     {
         try
         {
-            // 1. Tự động tạo thư mục cha nếu chưa có (ví dụ ~/.config/cta/)
+            // 1. Tự động tạo thư mục cha nếu chưa có
             auto parent_dir = file_path_.parent_path();
             if (!parent_dir.empty() && !std::filesystem::exists(parent_dir))
             {
                 std::error_code ec;
                 std::filesystem::create_directories(parent_dir, ec);
-                if (ec)
-                {
-                    file_path_ = "/tmp/cta_config.json";
-                }
             }
-            // 2. Mở file và ghi đè nội dung cấu hình mới nhất
-            std::ofstream out_file(file_path_, std::ios::out | std::ios::trunc);
-            if (!out_file.is_open())
+
+            // 2. Mở file: nếu file đã tồn tại thì mở ghi đè KHÔNG DÙNG O_CREAT
+            //    (để tránh bị Linux kernel fs.protected_regular chặn khi chuyển đổi giữa sudo/root và user thường)
+            int fd = ::open(file_path_.c_str(), O_WRONLY | O_TRUNC);
+            if (fd < 0 && errno == ENOENT)
             {
-                file_path_ = "/tmp/cta_config.json";
-                out_file.open(file_path_, std::ios::out | std::ios::trunc);
-                if (!out_file.is_open())
-                {
-                    std::cerr << "[LinuxFileStorage] Không thể mở file để ghi: " << file_path_ << std::endl;
-                    return false;
-                }
+                // Chỉ dùng O_CREAT khi file chưa từng tồn tại
+                fd = ::open(file_path_.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
             }
-            out_file << json;
-            out_file.close();
+
+            if (fd < 0)
+            {
+                std::cerr << "[LinuxFileStorage] Không thể mở file để ghi: " << file_path_ 
+                          << " (Lỗi hệ thống: " << std::strerror(errno) << ")" << std::endl;
+                return false;
+            }
+
+            ssize_t bytes_written = ::write(fd, json.data(), json.size());
+            ::close(fd);
+
+            if (bytes_written != static_cast<ssize_t>(json.size()))
+            {
+                std::cerr << "[LinuxFileStorage] Ghi file không hoàn tất: " << file_path_ << std::endl;
+                return false;
+            }
+
+            // Đảm bảo file luôn có quyền đọc/ghi 0666 cho mọi user
+            ::chmod(file_path_.c_str(), 0666);
             std::cout << "[LinuxFileStorage] Đã lưu cấu hình dự phòng vào: " << file_path_ << std::endl;
             return true;
         }
@@ -83,12 +92,11 @@ namespace sysmon
     {
         try
         {
-            // 1. Kiểm tra xem file có tồn tại không
+            // Chỉ đọc từ duy nhất 1 file cấu hình file_path_ (/tmp/cta_config.json)
             if (!std::filesystem::exists(file_path_))
             {
-                return false; // Lần đầu khởi chạy, chưa có file cấu hình cũ
+                return false; // Chưa có file cấu hình cũ
             }
-            // 2. Đọc toàn bộ nội dung file vào chuỗi outJson
             std::ifstream in_file(file_path_, std::ios::in);
             if (!in_file.is_open())
             {
