@@ -73,7 +73,7 @@ namespace sysmon
         }
         uint64_t cur_sys_time = fileTimeToUint64(sys_kernel_time) + fileTimeToUint64(sys_user_time);
 
-        // 4. Đọc bộ nhớ RAM vật lý (Working Set Size, tương đương VmRSS trên Linux)
+        // 4. Đọc bộ nhớ RAM (Working Set Size, tương đương VmRSS trên Linux)
         PROCESS_MEMORY_COUNTERS_EX pmc{};
         double memory_mb = 0.0;
         if (GetProcessMemoryInfo(hProcess, reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc), sizeof(pmc)))
@@ -92,7 +92,7 @@ namespace sysmon
         // Đóng handle tiến trình ngay khi đọc xong
         CloseHandle(hProcess);
 
-        // 6. Tính toán chênh lệch (Delta) với lần lấy mẫu trước
+        // 6. Tính toán chênh lệch với lần lấy mẫu trước
         auto now = std::chrono::steady_clock::now();
         ProcessHistoryWin &hist = history_[pid];
 
@@ -136,7 +136,7 @@ namespace sysmon
         outMetrics.cpu_percent = cpu_pct;
         outMetrics.memory_mb = memory_mb;
         outMetrics.disk_mb_s = disk_mb_s;
-        outMetrics.network_kb_s = 0.0; // Lưu ý: Sẽ tích hợp WFP (Windows Filtering Platform) ở bước tiếp theo
+        outMetrics.network_kb_s = 0.0; 
         outMetrics.timestamp = getCurrentTimestamp();
 
         return true;
@@ -172,7 +172,7 @@ namespace sysmon
             {
                 std::string exe_name = pe.szExeFile;
 
-                // TARGETED FILTERING: Chỉ kiểm tra sâu những tiến trình nằm trong cấu hình
+                // Chỉ kiểm tra sâu những tiến trình nằm trong cấu hình
                 bool is_target = false;
                 std::string matched_name;
                 for (const auto &target : targetProcessNames)
@@ -187,7 +187,7 @@ namespace sysmon
 
                 if (!is_target)
                 {
-                    continue; // Bỏ qua ngay lập tức để tiết kiệm CPU (< 5%)
+                    continue; // Bỏ qua ngay 
                 }
 
                 uint32_t pid = pe.th32ProcessID;
@@ -228,7 +228,6 @@ namespace sysmon
 }
 
 #else
-// Stub dự phòng khi mở/phân tích trên Linux (IDE không bị gạch đỏ, không sinh log rác)
 namespace sysmon
 {
     WindowsProcessMonitor::WindowsProcessMonitor() {}

@@ -12,7 +12,7 @@
 
 namespace sysmon
 {
-    // Cấu trúc lưu lại trạng thái của lần lấy mẫu trước để tính độ lệch (Delta)
+    // Cấu trúc trạng thái lưu lại của lần trước để tính độ lệch
     struct ProcessHistoryWin
     {
         std::chrono::steady_clock::time_point last_time; ///< Thời điểm lấy mẫu lần trước
@@ -35,7 +35,7 @@ namespace sysmon
         WindowsProcessMonitor(WindowsProcessMonitor &&) noexcept = default;
         WindowsProcessMonitor &operator=(WindowsProcessMonitor &&) noexcept = default;
 
-        // Thu thập chỉ số phần cứng định kỳ cho danh sách tiến trình mục tiêu (Targeted Filtering)
+        // Thu thập chỉ số phần cứng định kỳ cho danh sách tiến trình mục tiêu
         std::vector<ProcessMetrics> collectMetrics(
             const std::vector<std::string> &targetProcessNames) override;
 
@@ -44,7 +44,7 @@ namespace sysmon
         bool getMetricsForPid(uint32_t pid, const std::string &process_name, ProcessMetrics &outMetrics);
 
     private:
-        uint32_t num_cores_ = 1;                                  ///< Số lõi CPU của máy
+        uint32_t num_cores_ = 1;                                  ///< Số CPU core của máy
         std::unordered_map<uint32_t, ProcessHistoryWin> history_; ///< Bộ nhớ đệm lưu trạng thái cũ theo PID
     };
 }
