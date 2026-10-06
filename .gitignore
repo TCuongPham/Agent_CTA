@@ -1,10 +1,15 @@
 # ==========================================
-# C++ / CMake Build Artifacts
+# C++ / CMake / MSBuild Build Artifacts
 # ==========================================
 build/
 bin/
 out/
 lib/
+x64/
+ARM64/
+Win32/
+Debug/
+Release/
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
@@ -14,7 +19,7 @@ CTestTestfile.cmake
 Testing/
 
 # ==========================================
-# Compiled Binaries and Libraries
+# Compiled Binaries, Libraries & Drivers
 # ==========================================
 *.o
 *.obj
@@ -26,6 +31,14 @@ Testing/
 *.exe
 *.out
 *.app
+*.sys
+*.cat
+*.cer
+*.pfx
+*.tlog
+*.recipe
+*.lastbuildstate
+*.FileListAbsolute.txt
 
 # Target Executables (Linux output names)
 CTA
@@ -36,6 +49,8 @@ CTB
 *.pdb
 *.idb
 *.ilk
+*.iobj
+*.ipdb
 
 # ==========================================
 # IDE & Editor Configurations
@@ -48,6 +63,7 @@ CTB
 .idea/
 *.suo
 *.user
+*.vcxproj.user
 *.userosv
 *.sln.docstates
 
@@ -64,3 +80,4 @@ Thumbs.db
 events.log
 *.sock
 *.tmp
+
