@@ -28,6 +28,9 @@ namespace sysmon
         //Lấy tổng số byte mạng (RX + TX) của một PID.
         bool getProcessNetworkBytes(uint32_t pid, uint64_t &out_total_bytes);
 
+        // Xóa thông số mạng của một PID khi tiến trình kết thúc để tránh đầy BPF Map
+        bool removeProcess(uint32_t pid);
+
     private:
         struct process_net_bpf *skel_ = nullptr; ///< Con trỏ đối tượng Skeleton
         int map_fd_ = -1;                        ///< File descriptor của proc_net_map

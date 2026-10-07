@@ -74,4 +74,13 @@ namespace sysmon
         out_total_bytes = 0;
         return false;
     }
+
+    bool BPFNetTracker::removeProcess(uint32_t pid)
+    {
+        if (!is_available_ || map_fd_ < 0)
+        {
+            return false;
+        }
+        return bpf_map_delete_elem(map_fd_, &pid) == 0;
+    }
 }

@@ -6,7 +6,7 @@
       "cpu_percent": 50.0,
       "memory_mb": 2000.0,
       "disk_mb_s": 1.0,
-      "network_kb_s": 1.0
+      "network_kb_s": 60.0
     },
     {
       "process_name": "nginx",

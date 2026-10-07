@@ -278,6 +278,7 @@ namespace sysmon
         {
             if (current_active_pids.find(it->first) == current_active_pids.end())
             {
+                bpf_tracker_.removeProcess(it->first);
                 it = history_.erase(it);
             }
             else

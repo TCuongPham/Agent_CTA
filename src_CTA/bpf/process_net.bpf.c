@@ -45,6 +45,9 @@ static __always_inline void add_net_stats(__u32 pid, __u64 rx, __u64 tx) {
 // int tcp_sendmsg(struct sock *sk, struct msghdr *msg, size_t size)
 SEC("kprobe/tcp_sendmsg")
 int BPF_KPROBE(trace_tcp_sendmsg, struct sock *sk, struct msghdr *msg, size_t size) {
+    if ((long)size <= 0) {
+        return 0;
+    }
     __u32 pid = bpf_get_current_pid_tgid() >> 32;
     add_net_stats(pid, 0, (__u64)size);
     return 0;
@@ -54,11 +57,12 @@ int BPF_KPROBE(trace_tcp_sendmsg, struct sock *sk, struct msghdr *msg, size_t si
 // int tcp_cleanup_rbuf(struct sock *sk, int copied)
 SEC("kprobe/tcp_cleanup_rbuf")
 int BPF_KPROBE(trace_tcp_cleanup_rbuf, struct sock *sk, int copied) {
-    if (copied <= 0) {
+    int bytes = (int)copied;
+    if (bytes <= 0) {
         return 0;
     }
     __u32 pid = bpf_get_current_pid_tgid() >> 32;
-    add_net_stats(pid, (__u64)copied, 0);
+    add_net_stats(pid, (__u64)bytes, 0);
     return 0;
 }
 
@@ -70,7 +74,7 @@ int BPF_KPROBE(trace_tcp_cleanup_rbuf, struct sock *sk, int copied) {
 // int udp_sendmsg(struct sock *sk, struct msghdr *msg, size_t len)
 SEC("kprobe/udp_sendmsg")
 int BPF_KPROBE(trace_udp_sendmsg, struct sock *sk, struct msghdr *msg, size_t len) {
-    if (len <= 0) {
+    if ((long)len <= 0) {
         return 0;
     }
     __u32 pid = bpf_get_current_pid_tgid() >> 32;
@@ -81,12 +85,13 @@ int BPF_KPROBE(trace_udp_sendmsg, struct sock *sk, struct msghdr *msg, size_t le
 // 4. Hook kretprobe bắt lưu lượng UDP IPv4 NHẬN VỀ (RX): udp_recvmsg
 // int udp_recvmsg(struct sock *sk, struct msghdr *msg, size_t len, ...)
 SEC("kretprobe/udp_recvmsg")
-int BPF_KRETPROBE(trace_udp_recvmsg, long ret) {
-    if (ret <= 0) {
+int BPF_KRETPROBE(trace_udp_recvmsg, int ret) {
+    int bytes = (int)ret;
+    if (bytes <= 0) {
         return 0;
     }
     __u32 pid = bpf_get_current_pid_tgid() >> 32;
-    add_net_stats(pid, (__u64)ret, 0);
+    add_net_stats(pid, (__u64)bytes, 0);
     return 0;
 }
 
@@ -94,7 +99,7 @@ int BPF_KRETPROBE(trace_udp_recvmsg, long ret) {
 // int udpv6_sendmsg(struct sock *sk, struct msghdr *msg, size_t len)
 SEC("kprobe/udpv6_sendmsg")
 int BPF_KPROBE(trace_udpv6_sendmsg, struct sock *sk, struct msghdr *msg, size_t len) {
-    if (len <= 0) {
+    if ((long)len <= 0) {
         return 0;
     }
     __u32 pid = bpf_get_current_pid_tgid() >> 32;
@@ -105,12 +110,13 @@ int BPF_KPROBE(trace_udpv6_sendmsg, struct sock *sk, struct msghdr *msg, size_t 
 // 6. Hook kretprobe bắt lưu lượng UDP IPv6 NHẬN VỀ (RX): udpv6_recvmsg
 // int udpv6_recvmsg(struct sock *sk, struct msghdr *msg, size_t len, ...)
 SEC("kretprobe/udpv6_recvmsg")
-int BPF_KRETPROBE(trace_udpv6_recvmsg, long ret) {
-    if (ret <= 0) {
+int BPF_KRETPROBE(trace_udpv6_recvmsg, int ret) {
+    int bytes = (int)ret;
+    if (bytes <= 0) {
         return 0;
     }
     __u32 pid = bpf_get_current_pid_tgid() >> 32;
-    add_net_stats(pid, (__u64)ret, 0);
+    add_net_stats(pid, (__u64)bytes, 0);
     return 0;
 }
 
