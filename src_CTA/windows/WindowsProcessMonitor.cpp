@@ -60,6 +60,8 @@ namespace sysmon
         SYSTEM_INFO si;
         GetSystemInfo(&si);
         num_cores_ = si.dwNumberOfProcessors > 0 ? si.dwNumberOfProcessors : 1;
+        // Khoi tao WFP Tracker (Ket noi WFP Kernel Driver hoac fallback EStats)
+        wfp_tracker_.initialize();
     }
 
     // Lấy chi tiết thông số tài nguyên cho một tiến trình cụ thể qua PID
@@ -128,13 +130,13 @@ namespace sysmon
 
             if (dt > 0.0)
             {
-                // Tính % CPU = (Delta Process Time / Delta System Time) * 100 * num_cores
+                // Tinh % CPU = (Delta Process Time / Delta System Time) * 100 (Chuan hoa [0%, 100%])
                 if (cur_sys_time > hist.last_sys_time && cur_proc_time >= hist.last_proc_time)
                 {
                     uint64_t delta_proc = cur_proc_time - hist.last_proc_time;
                     uint64_t delta_sys = cur_sys_time - hist.last_sys_time;
-                    cpu_pct = (static_cast<double>(delta_proc) / delta_sys) * 100.0 * num_cores_;
-                    cpu_pct = std::clamp(cpu_pct, 0.0, 100.0 * num_cores_);
+                    cpu_pct = (static_cast<double>(delta_proc) / delta_sys) * 100.0;
+                    cpu_pct = std::clamp(cpu_pct, 0.0, 100.0);
                 }
 
                 // Tính Disk I/O (MB/s)
@@ -187,7 +189,7 @@ namespace sysmon
         HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if (hSnapshot == INVALID_HANDLE_VALUE)
         {
-            std::cerr << "[WindowsProcessMonitor] Không thể tạo Process Snapshot." << std::endl;
+            std::cerr << "[WindowsProcessMonitor] Khong the tao Process Snapshot." << std::endl;
             return results;
         }
 

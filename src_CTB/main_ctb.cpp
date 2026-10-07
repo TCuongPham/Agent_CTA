@@ -12,7 +12,7 @@ namespace
     sysmon::CTB *g_ctb_instance = nullptr;
     void signalHandler(int signum)
     {
-        std::cout << "\n[main_ctb] Nhận tín hiệu dừng (" << signum << ")..." << std::endl;
+        std::cout << "\n[main_ctb] Nhan tin hieu dung (" << signum << ")..." << std::endl;
         if (g_ctb_instance)
         {
             g_ctb_instance->stop();
@@ -55,13 +55,13 @@ int main(int argc, char *argv[])
     }
 
     // 3. Chạy vòng lặp lắng nghe CTA kết nối và nhận cảnh báo
-    std::cout << "\n>>> CTB Server đang chạy...<<<\n"
+    std::cout << "\n>>> CTB Server dang chay...<<<\n"
               << std::endl;
 
     ctb.runReceiveLoop();
 
     g_ctb_instance = nullptr;
 
-    std::cout << "[main_ctb] CTB đã dừng." << std::endl;
+    std::cout << "[main_ctb] CTB da dung." << std::endl;
     return 0;
 }

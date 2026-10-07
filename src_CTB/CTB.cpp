@@ -35,13 +35,17 @@ namespace sysmon
             {
                 target_path = "../" + file_path;
             }
+            else if (std::filesystem::exists("../../" + file_path))
+            {
+                target_path = "../../" + file_path;
+            }
         }
 
         config_file_path_ = target_path;
         if (!std::filesystem::exists(config_file_path_))
         {
-            std::cerr << "[CTB] Cảnh báo: Không tìm thấy file cấu hình tại " << file_path 
-                      << " hoặc ../" << file_path << std::endl;
+            std::cerr << "[CTB] Canh bao: Khong tim thay file cau hinh tai " << file_path 
+                      << " hoac ../" << file_path << std::endl;
             return false;
         }
 
@@ -50,7 +54,7 @@ namespace sysmon
             std::ifstream file(config_file_path_);
             if (!file.is_open())
             {
-                std::cerr << "[CTB] Không thể mở file cấu hình: " << config_file_path_ << std::endl;
+                std::cerr << "[CTB] Khong the mo file cau hinh: " << config_file_path_ << std::endl;
                 return false;
             }
             std::stringstream buffer;
@@ -58,12 +62,12 @@ namespace sysmon
             json j = json::parse(buffer.str());
             current_config_json_ = j.dump();
             last_config_time_ = std::filesystem::last_write_time(config_file_path_);
-            std::cout << "[CTB] Đã nạp cấu hình từ " << config_file_path_ << std::endl;
+            std::cout << "[CTB] Da nap cau hinh tu " << config_file_path_ << std::endl;
             return true;
         }
         catch (const std::exception &e)
         {
-            std::cerr << "[CTB] Lỗi nạp cấu hình từ " << config_file_path_ << ": " << e.what() << std::endl;
+            std::cerr << "[CTB] Loi nap cau hinh tu " << config_file_path_ << ": " << e.what() << std::endl;
             return false;
         }
     }
@@ -75,15 +79,15 @@ namespace sysmon
         {
             return true;
         }
-        std::cout << "[CTB Server] Đang mở Server tại " << host << ":" << port << "..." << std::endl;
+        std::cout << "[CTB Server] Dang mo Server tai " << host << ":" << port << "..." << std::endl;
         if (!socket_channel_->startServer(host, port))
         {
-            std::cerr << "[CTB] Không thể mở Server trên " << host << ":" << port << std::endl;
+            std::cerr << "[CTB] Khong the mo Server tren " << host << ":" << port << std::endl;
             return false;
         }
         is_running_.store(true);
 
-        std::cout << "[CTB Server] Đang lắng nghe kết nối từ CTA trên cổng " << port << "..." << std::endl;
+        std::cout << "[CTB Server] Dang lang nghe ket noi tu CTA tren cong " << port << "..." << std::endl;
         return true;
     }
 
@@ -98,7 +102,7 @@ namespace sysmon
         {
             socket_channel_->disconnect();
         }
-        std::cout << "[CTB] Đã ngắt kết nối an toàn." << std::endl;
+        std::cout << "[CTB] Da ngat ket noi an toan." << std::endl;
     }
 
     bool CTB::isRunning() const
@@ -112,10 +116,10 @@ namespace sysmon
         // Kiểm tra kết nối socket
         if (!socket_channel_ || !socket_channel_->isConnected())
         {
-            std::cerr << "[CTB] Không thể gửi cấu hình: Chưa kết nối tới CTA!" << std::endl;
+            std::cerr << "[CTB] Khong the gui cau hinh: Chua ket noi toi CTA!" << std::endl;
             return false;
         }
-        std::cout << "[CTB] Đang đẩy thông tin cấu hình sang CTA..." << std::endl;
+        std::cout << "[CTB] Dang day thong tin cau hinh sang CTA..." << std::endl;
 
         // Đảm bảo JSON ở dạng compact 1 dòng (không chứa '\n' làm vỡ frame nhận)
         std::string payload;
@@ -132,12 +136,12 @@ namespace sysmon
         // Gửi thông tin cấu hình qua socket
         if (socket_channel_->sendMessage(payload))
         {
-            std::cout << "[CTB] Gửi cấu hình thành công!" << std::endl;
+            std::cout << "[CTB] Gui cau hinh thanh cong!" << std::endl;
             return true;
         }
         else
         {
-            std::cerr << "[CTB] Gửi cấu hình thất bại." << std::endl;
+            std::cerr << "[CTB] Gui cau hinh that bai." << std::endl;
             return false;
         }
     }
@@ -155,6 +159,10 @@ namespace sysmon
             if (std::filesystem::exists("../" + config_file_path_))
             {
                 config_file_path_ = "../" + config_file_path_;
+            }
+            else if (std::filesystem::exists("../../" + config_file_path_))
+            {
+                config_file_path_ = "../../" + config_file_path_;
             }
             else
             {
@@ -183,7 +191,7 @@ namespace sysmon
                         {
                             current_config_json_ = std::move(new_json);
                             std::cout << "\n[CTB Server] File " << config_file_path_ 
-                                      << " vừa thay đổi! Tự động gửi cấu hình sang CTA..." << std::endl;
+                                      << " vua thay doi! Tu dong gui cau hinh sang CTA..." << std::endl;
                             if (socket_channel_->isConnected())
                             {
                                 sendConfigJson(current_config_json_);
@@ -195,7 +203,7 @@ namespace sysmon
         }
         catch (const std::exception &e)
         {
-            std::cerr << "[CTB] Cảnh báo lỗi đọc/parse file config: " << e.what() << std::endl;
+            std::cerr << "[CTB] Canh bao loi doc/parse file config: " << e.what() << std::endl;
         }
     }
 
@@ -204,10 +212,7 @@ namespace sysmon
     {
         std::lock_guard<std::mutex> lock(log_mutex_);
 
-        // 1. In ra màn hình console (chữ màu đỏ/nổi bật)
-        std::cout << "\033[1;31m[CẢNH BÁO]\033[0m " << alert_line << std::endl;
-
-        // 2. Ghi nối tiếp (append) vào file log
+        // Ghi nối tiếp (append) vào file log
         std::ofstream out_file(log_file_path_, std::ios::out | std::ios::app);
         if (out_file.is_open())
         {
@@ -216,14 +221,14 @@ namespace sysmon
         }
         else
         {
-            std::cerr << "[CTB] Không thể mở file log: " << log_file_path_ << std::endl;
+            std::cerr << "[CTB] Khong the mo file log: " << log_file_path_ << std::endl;
         }
     }
 
     // Vòng lặp nhận cảnh báo từ CTA và ghi log
     void CTB::runReceiveLoop()
     {
-        std::cout << "[CTB Server] Cảnh báo từ CTA (Lưu vào: "
+        std::cout << "[CTB Server] Canh bao tu CTA (Luu vao: "
                   << log_file_path_ << ")..." << std::endl;
 
         while (is_running_.load())
@@ -238,7 +243,7 @@ namespace sysmon
                 {
                     continue;
                 }
-                std::cout << "[CTB Server] CTA Agent đã kết nối thành công!" << std::endl;
+                std::cout << "[CTB Server] CTA Agent da ket noi thanh cong!" << std::endl;
 
                 // Gửi ngay cấu hình hiện tại sang CTA khi vừa kết nối
                 if (!current_config_json_.empty())
@@ -261,7 +266,7 @@ namespace sysmon
                 // Nếu mất kết nối mạng với CTA
                 if (!socket_channel_->isConnected())
                 {
-                    std::cerr << "[CTB Server] CTA Agent đã ngắt kết nối. Đang chờ CTA kết nối lại..." << std::endl;
+                    std::cerr << "[CTB Server] CTA Agent da ngat ket noi. Dang cho CTA ket noi lai..." << std::endl;
                 }
             }
         }

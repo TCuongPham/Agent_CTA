@@ -39,17 +39,17 @@ namespace sysmon
                 MonitorConfig loaded_cfg = j.get<MonitorConfig>();
                 std::lock_guard<std::mutex> lock(config_mutex_);
                 current_config_ = std::move(loaded_cfg);
-                std::cout << "[CTA] Đã nạp cấu hình cũ từ storage ("
-                          << current_config_.thresholds.size() << " tiến trình)." << std::endl;
+                std::cout << "[CTA] Da nap cau hinh cu tu storage ("
+                          << current_config_.thresholds.size() << " tien trinh)." << std::endl;
             }
             catch (const std::exception &e)
             {
-                std::cerr << "[CTA] Lỗi đọc JSON cấu hình cũ: " << e.what() << std::endl;
+                std::cerr << "[CTA] Loi doc JSON cau hinh cu: " << e.what() << std::endl;
             }
         }
         else
         {
-            std::cout << "[CTA] Chưa có cấu hình cũ. Chờ cấu hình từ CTB." << std::endl;
+            std::cout << "[CTA] Chua co cau hinh cu. Cho cau hinh tu CTB." << std::endl;
         }
     }
 
@@ -59,12 +59,12 @@ namespace sysmon
         // Kiểm tra trạng thái
         if (is_running_.load())
         {
-            std::cout << "[CTA] Đang chạy." << std::endl;
+            std::cout << "[CTA] Dang chay." << std::endl;
             return true;
         }
         if (!socket_channel_)
         {
-            std::cerr << "[CTA] Lỗi: SocketChannel chưa được khởi tạo!" << std::endl;
+            std::cerr << "[CTA] Loi: SocketChannel chua duoc khoi tao!" << std::endl;
             return false;
         }
         // Lưu thông tin CTB Server cần kết nối
@@ -86,7 +86,7 @@ namespace sysmon
         {
             return;
         }
-        std::cout << "[CTA] Đang dừng các tiến trình..." << std::endl;
+        std::cout << "[CTA] Dang dung cac tien trinh..." << std::endl;
 
         // Đánh thức luồng lấy mẫu
         cv_stop_.notify_all();
@@ -125,8 +125,8 @@ namespace sysmon
                 std::lock_guard<std::mutex> lock(config_mutex_);
                 current_config_ = new_cfg;
             }
-            std::cout << "[CTA] Cập nhật cấu hình thành công: "
-                      << new_cfg.thresholds.size() << " tiến trình, chu kỳ: "
+            std::cout << "[CTA] Cap nhat cau hinh thanh cong: "
+                      << new_cfg.thresholds.size() << " tien trinh, chu ky: "
                       << new_cfg.sampling_interval_ms << " ms." << std::endl;
             // Lưu cấu hình xuống bộ nhớ
             if (storage_)
@@ -140,7 +140,7 @@ namespace sysmon
         }
         catch (const std::exception &e)
         {
-            std::cerr << "[CTA] Lỗi cú pháp JSON cấu hình: " << e.what() << std::endl;
+            std::cerr << "[CTA] Loi cu phap JSON cau hinh: " << e.what() << std::endl;
             return false;
         }
     }
@@ -149,7 +149,7 @@ namespace sysmon
     // Hàm thu thập thông số định kỳ và so khớp ngưỡng
     void CTA::samplingLoop()
     {
-        std::cout << "[CTA] Đang lấy thông số tài nguyên sử dụng..." << std::endl;
+        std::cout << "[CTA] Dang lay thong so tai nguyen su dung..." << std::endl;
         while (is_running_.load())
         {
             uint32_t interval_ms = 1000;
@@ -193,7 +193,7 @@ namespace sysmon
                               { return !is_running_.load() || config_updated_.load(); });
             config_updated_.store(false);
         }
-        std::cout << "[CTA] Luồng thu thập tài nguyên kết thúc." << std::endl;
+        std::cout << "[CTA] Luong thu thap tai nguyen ket thuc." << std::endl;
     }
     void CTA::checkThresholds(const ProcessMetrics &m, const ProcessThreshold &th)
     {
@@ -240,13 +240,13 @@ namespace sysmon
                                       { return !is_running_.load(); });
                     continue;
                 }
-                std::cout << "[CTA] Đã kết nối tới CTB Server!" << std::endl;
+                std::cout << "[CTA] Da ket noi toi CTB Server!" << std::endl;
 
                 // 2. Vừa kết nối -> đẩy toàn bộ log tồn đọng
                 std::vector<EventRecord> pending_events = event_queue_->drainAll();
                 if (!pending_events.empty())
                 {
-                    std::cout << "[CTA] Gửi " << pending_events.size()
+                    std::cout << "[CTA] Gui " << pending_events.size()
                               << " log sang CTB..." << std::endl;
                     for (const auto &ev : pending_events)
                     {
@@ -263,7 +263,7 @@ namespace sysmon
             {
                 if (!incoming_msg.empty())
                 {
-                    std::cout << "[CTA] Nhận gói tin cấu hình từ CTB." << std::endl;
+                    std::cout << "[CTA] Nhan goi tin cau hinh tu CTB." << std::endl;
                     applyConfigFromJson(incoming_msg);
                 }
             }
@@ -273,7 +273,7 @@ namespace sysmon
             {
                 if (!socket_channel_->sendMessage(event.toLogString()))
                 {
-                    std::cerr << "[CTA] Mất kết nối tới CTB!" << std::endl;
+                    std::cerr << "[CTA] Mat ket noi toi CTB!" << std::endl;
                     // Nếu gửi lỗi, nạp lại sự kiện vào hàng đợi để không bị mất
                     event_queue_->push(std::move(event));
                     socket_channel_->disconnect();
@@ -281,7 +281,7 @@ namespace sysmon
                 }
             }
         }
-        std::cout << "[CTA] Luồng truyền đã kết thúc." << std::endl;
+        std::cout << "[CTA] Luong truyen da ket thuc." << std::endl;
     }
 
 }

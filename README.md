@@ -14,7 +14,6 @@
 7. [Hướng Dẫn Vận Hành](#7-hướng-dẫn-vận-hành)
 8. [Cấu Hình](#8-cấu-hình)
 
-
 ---
 
 ## 1. KIẾN TRÚC HỆ THỐNG

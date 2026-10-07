@@ -31,8 +31,10 @@
 #define FILE_ANY_ACCESS           0
 #endif
 
-// Mã IOCTL truy vấn byte mạng của một PID
+// Mã IOCTL truy vấn byte mạng của một PID (hỗ trợ cả Device Type 0x8000 của Driver và FILE_DEVICE_NETWORK 0x12)
 #define IOCTL_WFP_GET_PROCESS_BYTES \
+    CTL_CODE(0x8000, 0x801, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define IOCTL_WFP_GET_PROCESS_BYTES_ALT \
     CTL_CODE(FILE_DEVICE_NETWORK, 0x801, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
 // Dữ liệu trao đổi giữa Driver và CTA

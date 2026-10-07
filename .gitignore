@@ -2,6 +2,7 @@
 # C++ / CMake / MSBuild Build Artifacts
 # ==========================================
 build/
+build-win/
 bin/
 out/
 lib/

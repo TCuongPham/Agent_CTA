@@ -24,7 +24,7 @@ namespace sysmon
         skel_ = process_net_bpf__open_and_load();
         if (!skel_)
         {
-            std::cerr << "[BPFNetTracker] Không thể nạp eBPF vào kernel. (Cần chạy với quyền sudo)" << std::endl;
+            std::cerr << "[BPFNetTracker] Khong the nap eBPF vao kernel. (Can chay voi quyen sudo)" << std::endl;
             return false;
         }
 
@@ -32,7 +32,7 @@ namespace sysmon
         int err = process_net_bpf__attach(skel_);
         if (err)
         {
-            std::cerr << "[BPFNetTracker] Attach kprobes thất bại: " << err << std::endl;
+            std::cerr << "[BPFNetTracker] Attach kprobes that bai: " << err << std::endl;
             process_net_bpf__destroy(skel_);
             skel_ = nullptr;
             return false;
@@ -42,14 +42,14 @@ namespace sysmon
         map_fd_ = bpf_map__fd(skel_->maps.proc_net_map);
         if (map_fd_ < 0)
         {
-            std::cerr << "[BPFNetTracker] Không lấy được Map FD." << std::endl;
+            std::cerr << "[BPFNetTracker] Khong lay duoc Map FD." << std::endl;
             process_net_bpf__destroy(skel_);
             skel_ = nullptr;
             return false;
         }
 
         is_available_ = true;
-        std::cout << "[BPFNetTracker] Khởi tạo eBPF Network Monitor thành công!" << std::endl;
+        std::cout << "[BPFNetTracker] Khoi tao eBPF Network Monitor thanh cong!" << std::endl;
         return true;
 
     }

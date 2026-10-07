@@ -38,8 +38,8 @@ namespace sysmon
 
         if (status != ERROR_SUCCESS)
         {
-            std::cerr << "[WindowsRegistryStorage] Không thể mở hoặc tạo Registry key: " 
-                      << sub_key_ << " (Mã lỗi: " << status << ")" << std::endl;
+            std::cerr << "[WindowsRegistryStorage] Khong the mo hoac tao Registry key: " 
+                      << sub_key_ << " (Ma loi: " << status << ")" << std::endl;
             return false;
         }
 
@@ -56,12 +56,12 @@ namespace sysmon
 
         if (status != ERROR_SUCCESS)
         {
-            std::cerr << "[WindowsRegistryStorage] Không thể ghi giá trị vào Registry: " 
-                      << value_name_ << " (Mã lỗi: " << status << ")" << std::endl;
+            std::cerr << "[WindowsRegistryStorage] Khong the ghi gia tri vao Registry: " 
+                      << value_name_ << " (Ma loi: " << status << ")" << std::endl;
             return false;
         }
 
-        std::cout << "[WindowsRegistryStorage] Đã lưu cấu hình dự phòng vào Registry: HKCU\\" 
+        std::cout << "[WindowsRegistryStorage] Da luu cau hinh du phong vao Registry: HKCU\\" 
                   << sub_key_ << "\\" << value_name_ << std::endl;
         return true;
     }
@@ -115,7 +115,7 @@ namespace sysmon
 
         if (status != ERROR_SUCCESS)
         {
-            std::cerr << "[WindowsRegistryStorage] Lỗi khi đọc dữ liệu từ Registry (Mã lỗi: " 
+            std::cerr << "[WindowsRegistryStorage] Loi khi doc du lieu tu Registry (Ma loi: " 
                       << status << ")" << std::endl;
             return false;
         }

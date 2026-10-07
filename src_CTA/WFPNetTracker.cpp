@@ -59,9 +59,11 @@ namespace sysmon
         cleanup();
     }
 
-    // Khởi tạo phiên kết nối tới Base Filtering Engine (BFE) của WFP
+    // Khoi tao phien ket noi toi Base Filtering Engine (BFE) cua WFP
     bool WFPNetTracker::initialize()
     {
+        initFallbackEStats();
+
         HANDLE hDriver = CreateFileA(
             WFP_USER_DEVICE_NAME_A,
             GENERIC_READ | GENERIC_WRITE,
@@ -75,22 +77,21 @@ namespace sysmon
             driver_handle_ = hDriver;
             is_driver_connected_ = true;
             is_available_ = true;
-            std::cout << "[WFPNetTracker] Đã kết nối thành công tới WFP Kernel Driver! (Kernel-level monitoring)" << std::endl;
+            std::cout << "[WFPNetTracker] Da ket noi thanh cong toi WFP Kernel Driver! (Kernel-level monitoring)" << std::endl;
             return true;
         }
 
-        // 2. Fallback: Nếu Kernel Driver chưa được cài/nạp, chuyển sang User-Mode EStats
+        // 2. Fallback: Neu Kernel Driver chua duoc cai/nap, chuyen sang User-Mode EStats
         DWORD err = GetLastError();
         driver_handle_ = nullptr;
         is_driver_connected_ = false;
-        std::cout << "[WFPNetTracker] WFP Kernel Driver không mở được (Mã lỗi: " << err
-                  << "). Tự động chuyển sang User-Mode (TCP EStats)." << std::endl;
-        initFallbackEStats();
+        std::cout << "[WFPNetTracker] WFP Kernel Driver khong mo duoc (Ma loi: " << err
+                  << "). Tu dong chuyen sang User-Mode (TCP EStats)." << std::endl;
         is_available_ = true;
         return true;
     }
 
-    // Đóng phiên kết nối WFP Engine
+    // Dong phien ket noi WFP Engine
     void WFPNetTracker::cleanup()
     {
         if (driver_handle_ != nullptr && driver_handle_ != INVALID_HANDLE_VALUE)
@@ -112,7 +113,7 @@ namespace sysmon
         return is_driver_connected_;
     }
 
-    // Lấy tổng số byte mạng (In + Out) của một PID
+    // Lay tong so byte mang (In + Out) cua mot PID
     bool WFPNetTracker::getProcessNetworkRxTx(uint32_t pid, uint64_t &out_rx_bytes, uint64_t &out_tx_bytes)
     {
         out_rx_bytes = 0;
@@ -121,7 +122,10 @@ namespace sysmon
         {
             return false;
         }
-        // --- NHÁNH 1: Sử dụng WFP Kernel Driver qua IOCTL ---
+
+        bool driver_ok = false;
+
+        // --- NHANH 1: Su dung WFP Kernel Driver qua IOCTL ---
         if (is_driver_connected_ && driver_handle_ != nullptr)
         {
             uint32_t target_pid = pid;
@@ -136,69 +140,91 @@ namespace sysmon
                 sizeof(stats),
                 &bytes_returned,
                 nullptr);
+            if (!ok)
+            {
+                // Thu ma lenh IOCTL phu (ALT)
+                ok = DeviceIoControl(
+                    static_cast<HANDLE>(driver_handle_),
+                    IOCTL_WFP_GET_PROCESS_BYTES_ALT,
+                    &target_pid,
+                    sizeof(target_pid),
+                    &stats,
+                    sizeof(stats),
+                    &bytes_returned,
+                    nullptr);
+            }
             if (ok && bytes_returned >= sizeof(WFP_PROCESS_NET_STATS))
             {
                 out_rx_bytes = stats.rx_bytes;
                 out_tx_bytes = stats.tx_bytes;
-                return true;
-            }
-            return false;
-        }
-        // --- NHÁNH 2: Fallback User-Mode (TCP EStats) ---
-        DWORD size = 0;
-        GetExtendedTcpTable(nullptr, &size, FALSE, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0);
-        if (size == 0)
-        {
-            return false;
-        }
-
-        std::vector<BYTE> buffer(size);
-        if (GetExtendedTcpTable(buffer.data(), &size, FALSE, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0) != NO_ERROR)
-        {
-            return false;
-        }
-
-        auto pTable = reinterpret_cast<PMIB_TCPTABLE_OWNER_PID>(buffer.data());
-
-        bool found = false;
-        
-        for (DWORD i = 0; i < pTable->dwNumEntries; ++i)
-        {
-            const auto &row = pTable->table[i];
-            if (row.dwOwningPid == pid)
-            {
-                found = true;
-                if (g_pfnGetEStats && g_pfnSetEStats)
+                driver_ok = true;
+                if (out_rx_bytes > 0 || out_tx_bytes > 0)
                 {
-                    MIB_TCPROW tcpRow{};
-                    tcpRow.dwState = row.dwState;
-                    tcpRow.dwLocalAddr = row.dwLocalAddr;
-                    tcpRow.dwLocalPort = row.dwLocalPort;
-                    tcpRow.dwRemoteAddr = row.dwRemoteAddr;
-                    tcpRow.dwRemotePort = row.dwRemotePort;
-                    TCP_BOOLEAN_OPTIONAL enableSetting = TcpBoolOptEnabled;
-                    g_pfnSetEStats(
-                        &tcpRow,
-                        TcpConnectionEstatsData,
-                        reinterpret_cast<PUCHAR>(&enableSetting),
-                        0,
-                        sizeof(enableSetting),
-                        0);
-                    TCP_ESTATS_DATA_ROD_v0 rodData{};
-                    if (g_pfnGetEStats(
-                            &tcpRow,
-                            TcpConnectionEstatsData,
-                            nullptr, 0, 0,
-                            nullptr, 0, 0,
-                            reinterpret_cast<PUCHAR>(&rodData), 0, sizeof(rodData)) == NO_ERROR)
-                    {
-                        out_rx_bytes += rodData.DataBytesIn;
-                        out_tx_bytes += rodData.DataBytesOut;
-                    }
+                    return true;
                 }
             }
         }
-        return found;
+
+        // --- NHANH 2: Fallback User-Mode (TCP EStats) ---
+        // Neu Driver chua ghi nhan duoc byte nao, kiem tra them bang TCP EStats
+        DWORD size = 0;
+        GetExtendedTcpTable(nullptr, &size, FALSE, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0);
+        if (size > 0)
+        {
+            std::vector<BYTE> buffer(size);
+            if (GetExtendedTcpTable(buffer.data(), &size, FALSE, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0) == NO_ERROR)
+            {
+                auto pTable = reinterpret_cast<PMIB_TCPTABLE_OWNER_PID>(buffer.data());
+                bool found = false;
+                uint64_t estat_rx = 0;
+                uint64_t estat_tx = 0;
+
+                for (DWORD i = 0; i < pTable->dwNumEntries; ++i)
+                {
+                    const auto &row = pTable->table[i];
+                    if (row.dwOwningPid == pid)
+                    {
+                        found = true;
+                        if (g_pfnGetEStats && g_pfnSetEStats)
+                        {
+                            MIB_TCPROW tcpRow{};
+                            tcpRow.dwState = row.dwState;
+                            tcpRow.dwLocalAddr = row.dwLocalAddr;
+                            tcpRow.dwLocalPort = row.dwLocalPort;
+                            tcpRow.dwRemoteAddr = row.dwRemoteAddr;
+                            tcpRow.dwRemotePort = row.dwRemotePort;
+                            TCP_BOOLEAN_OPTIONAL enableSetting = TcpBoolOptEnabled;
+                            g_pfnSetEStats(
+                                &tcpRow,
+                                TcpConnectionEstatsData,
+                                reinterpret_cast<PUCHAR>(&enableSetting),
+                                0,
+                                sizeof(enableSetting),
+                                0);
+                            TCP_ESTATS_DATA_ROD_v0 rodData{};
+                            if (g_pfnGetEStats(
+                                    &tcpRow,
+                                    TcpConnectionEstatsData,
+                                    nullptr, 0, 0,
+                                    nullptr, 0, 0,
+                                    reinterpret_cast<PUCHAR>(&rodData), 0, sizeof(rodData)) == NO_ERROR)
+                            {
+                                estat_rx += rodData.DataBytesIn;
+                                estat_tx += rodData.DataBytesOut;
+                            }
+                        }
+                    }
+                }
+                if (found)
+                {
+                    if (estat_rx > out_rx_bytes) out_rx_bytes = estat_rx;
+                    if (estat_tx > out_tx_bytes) out_tx_bytes = estat_tx;
+                    return true;
+                }
+            }
+        }
+
+        return driver_ok;
     }
     bool WFPNetTracker::getProcessNetworkBytes(uint32_t pid, uint64_t &out_total_bytes)
     {

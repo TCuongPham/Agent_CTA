@@ -23,7 +23,7 @@ namespace sysmon
             int res = WSAStartup(MAKEWORD(2, 2), &wsa_data);
             if (res != 0)
             {
-                std::cerr << "[ISocketChannel] WSAStartup thất bại: " << res << std::endl;
+                std::cerr << "[ISocketChannel] WSAStartup that bai: " << res << std::endl;
             }
             else
             {
@@ -67,7 +67,7 @@ namespace sysmon
         server_fd_ = socket(AF_INET, SOCK_STREAM, 0);
         if (server_fd_ == INVALID_SOCKET_FD)
         {
-            std::cerr << "[ISocketChannel] Không thể tạo server socket." << std::endl;
+            std::cerr << "[ISocketChannel] Khong the tao server socket." << std::endl;
             return false;
         }
 
@@ -91,7 +91,7 @@ namespace sysmon
         // 4. Bind địa chỉ
         if (bind(server_fd_, reinterpret_cast<sockaddr *>(&server_addr), sizeof(server_addr)) < 0)
         {
-            std::cerr << "[ISocketChannel] Bind cổng " << port << " thất bại." << std::endl;
+            std::cerr << "[ISocketChannel] Bind cong " << port << " that bai." << std::endl;
             closeSocketHandle(server_fd_);
             return false;
         }
@@ -99,7 +99,7 @@ namespace sysmon
         // 5. Lắng nghe kết nối
         if (listen(server_fd_, 5) < 0)
         {
-            std::cerr << "[ISocketChannel] Listen thất bại." << std::endl;
+            std::cerr << "[ISocketChannel] Listen that bai." << std::endl;
             closeSocketHandle(server_fd_);
             return false;
         }
@@ -161,7 +161,7 @@ namespace sysmon
         client_fd_ = socket(AF_INET, SOCK_STREAM, 0);
         if (client_fd_ == INVALID_SOCKET_FD)
         {
-            std::cerr << "[ISocketChannel] Không thể tạo client socket." << std::endl;
+            std::cerr << "[ISocketChannel] Khong the tao client socket." << std::endl;
             return false;
         }
 
@@ -171,7 +171,7 @@ namespace sysmon
         server_addr.sin_port = htons(port);
         if (inet_pton(AF_INET, host.c_str(), &server_addr.sin_addr) <= 0)
         {
-            std::cerr << "[ISocketChannel] Địa chỉ IP không hợp lệ: " << host << std::endl;
+            std::cerr << "[ISocketChannel] Dia chi IP khong hop le: " << host << std::endl;
             closeSocketHandle(client_fd_);
             return false;
         }
@@ -179,13 +179,13 @@ namespace sysmon
         // 3. Thực hiện kết nối tới Server
         if (connect(client_fd_, reinterpret_cast<sockaddr *>(&server_addr), sizeof(server_addr)) < 0)
         {
-            std::cerr << "[ISocketChannel] Kết nối tới " << host << ":" << port << " thất bại." << std::endl;
+            std::cerr << "[ISocketChannel] Ket noi toi " << host << ":" << port << " that bai." << std::endl;
             closeSocketHandle(client_fd_);
             return false;
         }
         rx_buffer_.clear();
         is_connected_.store(true);
-        std::cout << "[ISocketChannel] Đã kết nối thành công tới Server " << host << ":" << port << std::endl;
+        std::cout << "[ISocketChannel] Da ket noi thanh cong toi Server " << host << ":" << port << std::endl;
         return true;
     }
 

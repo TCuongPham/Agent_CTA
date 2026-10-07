@@ -21,7 +21,7 @@ namespace
     sysmon::CTA *g_cta_instance = nullptr;
     void signalHandler(int signum)
     {
-        std::cout << "\n[CTA] Nhận tín hiệu dừng hệ thống (Signal: " << signum << ")..." << std::endl;
+        std::cout << "\n[CTA] Nhan tin hieu dung he thong (Signal: " << signum << ")..." << std::endl;
         if (g_cta_instance != nullptr)
         {
             g_cta_instance->stop();
@@ -48,16 +48,16 @@ int main(int argc, char *argv[])
     std::signal(SIGTERM, signalHandler);
 
     // 3. Khởi tạo các module thành phần thông qua Dependency Injection
-    std::cout << "[CTA] Đang khởi tạo Modules..." << std::endl;
+    std::cout << "[CTA] Dang khoi tao Modules..." << std::endl;
 #if defined(_WIN32)
     auto monitor = std::make_unique<sysmon::WindowsProcessMonitor>();
     auto storage = std::make_unique<sysmon::WindowsRegistryStorage>();
-    std::cout << "[CTA] Cấu hình lưu tại Registry: HKCU\\"
+    std::cout << "[CTA] Cau hinh luu tai Registry: HKCU\\"
               << storage->getSubKey() << "\\" << storage->getValueName() << std::endl;
 #else
     auto monitor = std::make_unique<sysmon::LinuxProcessMonitor>();
     auto storage = std::make_unique<sysmon::LinuxFileStorage>();
-    std::cout << "[CTA] Cấu hình lưu tại: "
+    std::cout << "[CTA] Cau hinh luu tai: "
               << storage->getFilePath() << std::endl;
 #endif
     auto socket_channel = std::make_unique<sysmon::ISocketChannel>();
@@ -75,10 +75,10 @@ int main(int argc, char *argv[])
     // 5. Khởi động CTA (chế độ Client kết nối tới CTB Server)
     if (!cta.start(host, port))
     {
-        std::cerr << "[CTA] Khởi động CTA thất bại. Kết thúc chương trình." << std::endl;
+        std::cerr << "[CTA] Khoi dong CTA that bai. Ket thuc chuong trinh." << std::endl;
         return 1;
     }
-    std::cout << "\n>>> CTA AGENT ĐANG CHẠY (KẾT NỐI SERVER " << host << ":" << port << ") <<<" << std::endl;
+    std::cout << "\n>>> CTA AGENT DANG CHAY (KET NOI SERVER " << host << ":" << port << ") <<<" << std::endl;
 
     // 6. Giữ tiến trình main cho đến khi nhận lệnh dừng
     while (cta.isRunning())
@@ -87,6 +87,6 @@ int main(int argc, char *argv[])
     }
     g_cta_instance = nullptr;
 
-    std::cout << "[CTA] CTA Agent đã kết thúc." << std::endl;
+    std::cout << "[CTA] CTA Agent da ket thuc." << std::endl;
     return 0;
 }

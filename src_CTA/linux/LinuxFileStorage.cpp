@@ -61,8 +61,8 @@ namespace sysmon
 
             if (fd < 0)
             {
-                std::cerr << "[LinuxFileStorage] Không thể mở file để ghi: " << file_path_ 
-                          << " (Lỗi hệ thống: " << std::strerror(errno) << ")" << std::endl;
+                std::cerr << "[LinuxFileStorage] Khong the mo file de ghi: " << file_path_ 
+                          << " (Loi he thong: " << std::strerror(errno) << ")" << std::endl;
                 return false;
             }
 
@@ -71,18 +71,18 @@ namespace sysmon
 
             if (bytes_written != static_cast<ssize_t>(json.size()))
             {
-                std::cerr << "[LinuxFileStorage] Ghi file không hoàn tất: " << file_path_ << std::endl;
+                std::cerr << "[LinuxFileStorage] Ghi file khong hoan tat: " << file_path_ << std::endl;
                 return false;
             }
 
             // Đảm bảo file luôn có quyền đọc/ghi 0666 cho mọi user
             ::chmod(file_path_.c_str(), 0666);
-            std::cout << "[LinuxFileStorage] Đã lưu cấu hình dự phòng vào: " << file_path_ << std::endl;
+            std::cout << "[LinuxFileStorage] Da luu cau hinh du phong vao: " << file_path_ << std::endl;
             return true;
         }
         catch (const std::exception &e)
         {
-            std::cerr << "[LinuxFileStorage] Ngoại lệ khi lưu file: " << e.what() << std::endl;
+            std::cerr << "[LinuxFileStorage] Ngoai le khi luu file: " << e.what() << std::endl;
             return false;
         }
     }
@@ -100,7 +100,7 @@ namespace sysmon
             std::ifstream in_file(file_path_, std::ios::in);
             if (!in_file.is_open())
             {
-                std::cerr << "[LinuxFileStorage] Không thể mở file để đọc: " << file_path_ << std::endl;
+                std::cerr << "[LinuxFileStorage] Khong the mo file de doc: " << file_path_ << std::endl;
                 return false;
             }
             std::stringstream buffer;
@@ -111,7 +111,7 @@ namespace sysmon
         }
         catch (const std::exception &e)
         {
-            std::cerr << "[LinuxFileStorage] Ngoại lệ khi đọc file: " << e.what() << std::endl;
+            std::cerr << "[LinuxFileStorage] Ngoai le khi doc file: " << e.what() << std::endl;
             return false;
         }
     }
