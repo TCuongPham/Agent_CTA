@@ -1,6 +1,7 @@
 // Entry point của Kernel Driver, tạo Device Object và xử lý các lệnh IOCTL từ User-Mode
 
 #include <ntddk.h>
+
 #include "CommonIoctl.h"
 #include "WfpCallouts.h"
 
@@ -14,6 +15,7 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
     UNREFERENCED_PARAMETER(RegistryPath);
     UNICODE_STRING devName = RTL_CONSTANT_STRING(NETMON_DEVICE_NAME);
     UNICODE_STRING symLink = RTL_CONSTANT_STRING(NETMON_DOS_DEVICE_NAME);
+
     // 1. Tạo Device Object
     NTSTATUS status = IoCreateDevice(
         DriverObject,
@@ -24,17 +26,22 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
         FALSE,
         &g_deviceObject);
     if (!NT_SUCCESS(status)) return status;
+
+    g_deviceObject->Flags |= DO_BUFFERED_IO;
+
     // 2. Tạo Symbolic Link để User Mode có thể gọi qua CreateFile
     status = IoCreateSymbolicLink(&symLink, &devName);
     if (!NT_SUCCESS(status)) {
         IoDeleteDevice(g_deviceObject);
         return status;
     }
+
     // 3. Đăng ký các hàm Dispatch
     DriverObject->MajorFunction[IRP_MJ_CREATE] = DispatchCreateClose;
     DriverObject->MajorFunction[IRP_MJ_CLOSE] = DispatchCreateClose;
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = DispatchDeviceControl;
     DriverObject->DriverUnload = DriverUnload;
+
     // 4. Khởi động WFP Callouts
     status = WfpRegisterCallouts(g_deviceObject);
     if (!NT_SUCCESS(status)) {
@@ -52,6 +59,7 @@ NTSTATUS DispatchCreateClose(PDEVICE_OBJECT DeviceObject, PIRP Irp)
     IoCompleteRequest(Irp, IO_NO_INCREMENT);
     return STATUS_SUCCESS;
 }
+
 // Xử lý truy vấn IOCTL từ tiến trình CTA User-Mode
 NTSTATUS DispatchDeviceControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 {

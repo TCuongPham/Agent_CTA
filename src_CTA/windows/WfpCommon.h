@@ -28,7 +28,7 @@
 #define METHOD_BUFFERED           0
 #endif
 #ifndef FILE_ANY_ACCESS
-#define FILE_ANY_ACCESS           0GetNetStatsForPid
+#define FILE_ANY_ACCESS           0
 #endif
 
 // Mã IOCTL truy vấn byte mạng của một PID

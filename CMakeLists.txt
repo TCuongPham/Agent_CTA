@@ -50,6 +50,13 @@ if(WIN32)
         "src_CTA/window/*.cpp"
         "src_CTA/windows/*.cpp"
     )
+
+    set(CTA_WIN_SOURCES
+        src_CTA/WFPNetTracker.cpp
+        src_CTA/windows/WindowsProcessMonitor.cpp
+        src_CTA/windows/WindowsRegistryStorage.cpp
+    )
+    
     if(CTA_WIN_SOURCES)
         add_executable(CTA ${CTA_COMMON_SOURCES} ${CTA_WIN_SOURCES})
         target_include_directories(CTA PRIVATE 

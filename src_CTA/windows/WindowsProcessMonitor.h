@@ -9,6 +9,7 @@
 #include <cstdint>
 
 #include "IProcessMonitor.h"
+#include "WFPNetTracker.h"
 
 namespace sysmon
 {
@@ -19,6 +20,7 @@ namespace sysmon
         uint64_t last_proc_time = 0;                     ///< utime + stime của tiến trình (100-nanosecond units)
         uint64_t last_sys_time = 0;                      ///< Tổng thời gian CPU hệ thống (100-nanosecond units)
         uint64_t last_disk_bytes = 0;                    ///< ReadTransferCount + WriteTransferCount
+        uint64_t last_net_bytes = 0;                     ///< Tổng số byte mạng (Inbound + Outbound)
         bool initialized = false;                        ///< Đã có dữ liệu khởi tạo lần đầu chưa
     };
 
@@ -46,5 +48,6 @@ namespace sysmon
     private:
         uint32_t num_cores_ = 1;                                  ///< Số CPU core của máy
         std::unordered_map<uint32_t, ProcessHistoryWin> history_; ///< Bộ nhớ đệm lưu trạng thái cũ theo PID
+        WFPNetTracker wfp_tracker_;                               ///< Module theo dõi mạng WFP theo từng PID
     };
 }

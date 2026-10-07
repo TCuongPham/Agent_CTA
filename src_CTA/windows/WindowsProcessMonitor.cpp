@@ -37,6 +37,23 @@ namespace sysmon
         return false;
     }
 
+    // Chuyển đổi chuỗi WCHAR (Unicode) sang std::string (UTF-8)
+    static std::string wideToString(const WCHAR *wstr)
+    {
+        if (!wstr || !*wstr)
+        {
+            return "";
+        }
+        int size = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, nullptr, 0, nullptr, nullptr);
+        if (size <= 1)
+        {
+            return "";
+        }
+        std::string result(size - 1, '\0');
+        WideCharToMultiByte(CP_UTF8, 0, wstr, -1, &result[0], size, nullptr, nullptr);
+        return result;
+    }
+
     // Hàm khởi tạo: Lấy số lõi CPU của hệ thống Windows
     WindowsProcessMonitor::WindowsProcessMonitor()
     {
@@ -92,12 +109,17 @@ namespace sysmon
         // Đóng handle tiến trình ngay khi đọc xong
         CloseHandle(hProcess);
 
-        // 6. Tính toán chênh lệch với lần lấy mẫu trước
+        // 6. Đọc tổng lưu lượng Network từ WFP Tracker
+        uint64_t cur_net_bytes = 0;
+        wfp_tracker_.getProcessNetworkBytes(pid, cur_net_bytes);
+
+        // 7. Tính toán chênh lệch với lần lấy mẫu trước
         auto now = std::chrono::steady_clock::now();
         ProcessHistoryWin &hist = history_[pid];
 
         double cpu_pct = 0.0;
         double disk_mb_s = 0.0;
+        double net_kb_s = 0.0;
 
         if (hist.initialized)
         {
@@ -112,6 +134,7 @@ namespace sysmon
                     uint64_t delta_proc = cur_proc_time - hist.last_proc_time;
                     uint64_t delta_sys = cur_sys_time - hist.last_sys_time;
                     cpu_pct = (static_cast<double>(delta_proc) / delta_sys) * 100.0 * num_cores_;
+                    cpu_pct = std::clamp(cpu_pct, 0.0, 100.0 * num_cores_);
                 }
 
                 // Tính Disk I/O (MB/s)
@@ -119,6 +142,13 @@ namespace sysmon
                 {
                     uint64_t delta_disk = cur_disk_bytes - hist.last_disk_bytes;
                     disk_mb_s = static_cast<double>(delta_disk) / (dt * 1024.0 * 1024.0);
+                }
+
+                // Tính Network I/O (KB/s)
+                if (cur_net_bytes >= hist.last_net_bytes)
+                {
+                    uint64_t delta_net = cur_net_bytes - hist.last_net_bytes;
+                    net_kb_s = static_cast<double>(delta_net) / (dt * 1024.0);
                 }
             }
         }
@@ -128,6 +158,7 @@ namespace sysmon
         hist.last_proc_time = cur_proc_time;
         hist.last_sys_time = cur_sys_time;
         hist.last_disk_bytes = cur_disk_bytes;
+        hist.last_net_bytes = cur_net_bytes;
         hist.initialized = true;
 
         // 7. Gán kết quả đầu ra
@@ -136,7 +167,7 @@ namespace sysmon
         outMetrics.cpu_percent = cpu_pct;
         outMetrics.memory_mb = memory_mb;
         outMetrics.disk_mb_s = disk_mb_s;
-        outMetrics.network_kb_s = 0.0; 
+        outMetrics.network_kb_s = net_kb_s;
         outMetrics.timestamp = getCurrentTimestamp();
 
         return true;
@@ -160,17 +191,17 @@ namespace sysmon
             return results;
         }
 
-        PROCESSENTRY32 pe{};
-        pe.dwSize = sizeof(PROCESSENTRY32);
+        PROCESSENTRY32W pe{};
+        pe.dwSize = sizeof(PROCESSENTRY32W);
 
         std::unordered_set<uint32_t> current_active_pids;
 
         // 2. Duyệt qua từng tiến trình trong hệ thống
-        if (Process32First(hSnapshot, &pe))
+        if (Process32FirstW(hSnapshot, &pe))
         {
             do
             {
-                std::string exe_name = pe.szExeFile;
+                std::string exe_name = wideToString(pe.szExeFile);
 
                 // Chỉ kiểm tra sâu những tiến trình nằm trong cấu hình
                 bool is_target = false;
@@ -187,7 +218,7 @@ namespace sysmon
 
                 if (!is_target)
                 {
-                    continue; // Bỏ qua ngay 
+                    continue; // Bỏ qua ngay
                 }
 
                 uint32_t pid = pe.th32ProcessID;
@@ -205,7 +236,7 @@ namespace sysmon
                     results.push_back(std::move(metrics));
                 }
 
-            } while (Process32Next(hSnapshot, &pe));
+            } while (Process32NextW(hSnapshot, &pe));
         }
 
         CloseHandle(hSnapshot);
